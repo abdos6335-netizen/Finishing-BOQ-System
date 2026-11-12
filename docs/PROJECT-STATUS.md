@@ -1,55 +1,60 @@
-# Finishing BOQ & Cost Estimation System
+# Finishing BOQ & Cost Estimation System — Project Status
 
-## Project Status
+**Current status:** Phase 1 — technical audit and requirements baseline  
+**Current version:** 0.1.0-preparation  
+**Default branch:** main  
+**Active planning branch:** implementation/four-phase-roadmap
 
-**Current Status:** Requirements and Architecture Preparation
-**Current Version:** 0.1.0-preparation
-**Default Branch:** main
+## Verified repository state
 
-## Project Objective
+The repository currently contains documentation and configuration files. There is no runnable application source, production engineering engine, database migration set, or executable automated test suite yet.
 
-Build a professional finishing quantity surveying and cost estimation application for residential projects, including apartments and villas.
+The four-phase plan is documented in [FOUR-PHASE-EXECUTION-PLAN.md](ROADMAP/FOUR-PHASE-EXECUTION-PLAN.md).
 
-## Core Principles
+## Objective
 
-- Deterministic engineering calculation engine independent from AI.
-- Independent quantity verification.
-- Full traceability of dimensions, formulas, assumptions, and approvals.
-- Revision-controlled BOQs and audit history.
-- Offline-first operation with secure synchronization.
-- Arabic and English interface.
+Build a professional quantity surveying and cost estimation application for residential finishing projects, including apartments and villas.
+
+## Core principles
+
+- Deterministic engineering calculations independent from AI.
+- An independently designed verification path.
+- Traceability of drawing evidence, dimensions, formulas, assumptions, rule versions, and approvals.
+- Revision-controlled drawings and BOQs with audit history.
+- Offline-capable operation with explicit and recoverable synchronization.
+- Arabic and English interface with RTL/LTR.
 - No automatic approval of uncertain engineering or financial data.
+- Internal tests before user acceptance testing.
 
-## Project Roadmap
+## Four delivery phases
 
-1. Requirements gathering and scope definition.
-2. Software Requirements Specification.
-3. System architecture and database design.
-4. Development environment and project foundation.
-5. Project and drawing management.
-6. Drawing intelligence and data extraction.
-7. Engineering quantity calculation engine.
-8. Independent verification engine.
-9. BOQ and cost estimation.
-10. Scheduling and productivity.
-11. Reports and exports.
-12. AI assistance, synchronization, and backups.
-13. Internal testing and first release.
-14. User acceptance testing and improvements.
+1. **Technical audit and engineering baseline:** reconcile documents, correct unsupported rules, freeze scope, and record architecture decisions.
+2. **Application foundation and data lifecycle:** application shell, project/drawing management, persistence, audit, backup, and sync design.
+3. **Drawing intelligence and engineering core:** drawing extraction, dimension comparison, deterministic quantities, and independent verification.
+4. **BOQ, costing, productivity, reporting, hardening, and first release.**
 
-## Current Work
+## Current work
 
-Detailed database schema and system architecture preparation.
+- Consolidating the four-phase plan.
+- Auditing formulas and removing unsupported default assumptions.
+- Recording technology choices and unresolved decisions.
+- Defining a practical foundation backlog and internal test gates.
 
-## Important Rules
+## Important rules
 
 - Planning is not implementation.
-- A phase is complete only after implementation and verification.
-- No client drawings, private project information, credentials, or API keys may be committed to this public repository.
-- Internal tests must be completed before user acceptance testing.
+- A phase is complete only after implementation evidence and verification.
+- No private client drawings, project information, credentials, API keys, or secrets may be committed to this public repository.
+- Synthetic test data must be labeled and kept separate from verified drawing data.
+- The user is not asked to perform acceptance testing until a usable release candidate exists.
 
-## Reference Test Project
+## Reference test project
 
-Kitchen + Laundry.
+Kitchen + Laundry is the initial reference scope. Any synthetic dimensions must be explicitly labeled as synthetic and must never be represented as measurements from an actual drawing.
 
-The user acceptance test will take place after a usable first release is available.
+## Known blockers
+
+- Final desktop/web architecture and packaging model are not yet selected.
+- Data synchronization and conflict semantics require a detailed design before multi-device editing is enabled.
+- Engineering standards, waste factors, and productivity rates require sources or project-specific approval.
+- No application code or executable tests exist yet.

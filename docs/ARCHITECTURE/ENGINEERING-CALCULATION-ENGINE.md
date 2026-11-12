@@ -1,179 +1,138 @@
 # Deterministic Quantity Calculation Engine
 
-**Version:** 1.0 Draft  
+**Version:** 1.1 Draft — engineering review required  
 **Last reviewed:** 12 November 2026
-
----
 
 ## 1. Purpose
 
-This document specifies the **rules, equations, and verification** of the deterministic quantity calculation engine. It is the foundation for all quantity computations in the system.
+Define the calculation contract for geometry and finishing quantities. This document is a design baseline, not a claim that an engine has already been implemented.
 
-## 2. Core Principles
+## 2. Non-negotiable principles
 
-1. **Deterministic** — same input → same output.
-2. **Documented per rule** — inputs, units, equation, assumptions, check, edge cases, and test cases.
-3. **No invented rules** — any rule is sourced from drawing, standard, or explicit user data.
-4. **Given or Assumed** — every quantity must have an explicit source and, where assumed, a noted assumption.
-5. **No auto-acceptance** — results below the verification threshold are flagged for human decision.
+1. Same normalized inputs, rule version, and calculation settings produce the same output.
+2. AI may extract or propose source data; only deterministic, versioned rules calculate quantities.
+3. Every result retains source evidence, input values, units, formula/rule version, assumptions, deductions, additions, waste basis, verification result, and approval state.
+4. No unsupported standard, waste percentage, deduction threshold, or routing allowance is silently applied.
+5. The primary calculation and independent verification paths must be separately designed.
+6. Invalid, incomplete, or conflicting inputs are not silently converted into approved quantities.
 
-## 3. Terminology
+## 3. Result terminology
 
-| Term | Meaning |
-|------|---------|
-| Net | Quantity after deductions |
-| Gross | Quantity before deductions |
-| Waste | Extra quantity to account for losses (mud, cutting loss, etc.) |
-| Input dimension | A dimension read from a drawing or explicitly entered |
-| Output | The value produced by the rule |
-| Rule | A single formula/calculation |
+| Term | Definition |
+|---|---|
+| Gross | Measured quantity before the explicitly applicable deductions |
+| Deduction | A documented subtraction with reason and source |
+| Addition | A documented addition with reason and source |
+| Net | Gross minus deductions plus additions |
+| Waste | Procurement/process allowance calculated only from an approved basis |
+| Order quantity | Quantity used for procurement after applying the approved waste/rounding/packaging rule |
+| Verified | Primary and independent paths agree within a defined, rule-specific tolerance and inputs have acceptable evidence |
+| Tentative | Calculation is possible but one or more inputs/rules are not confirmed |
+| Needs Review | Conflict, missing critical data, out-of-bounds geometry, or verification discrepancy exists |
+| Invalid | Input violates a hard validation rule and no quantity is issued |
 
-## 4. Notation
+## 4. Units and numeric handling
 
-- Lengths: meters (m) or millimeters (mm), always converted to a canonical form.
-- Areas: m².
-- Volumes: m³.
-- Counts: number (pcs, pieces).
-- Weights: kg, ton.
+Canonical units: length m, area m², volume m³, count pcs, mass kg. Preserve original units and source values alongside normalized values.
 
-Unit conversion table (selected):
-| From | To | Factor |
-|------|-----|--------|
-| mm | m | /1000 |
-| cm | m | /100 |
-| inch | mm | *25.4 |
-| ft | m | *0.3048 |
+Conversions:
+- mm to m: divide by 1000.
+- cm to m: divide by 100.
+- inch to mm: multiply by 25.4.
+- ft to m: multiply by 0.3048.
 
-## 5. Rules
+Use decimal-safe arithmetic for monetary values. Geometry calculations must document numeric precision and tolerances; do not round intermediate values unless the rule explicitly requires it. Store both raw and displayed precision.
 
-### 5.1 Geometry (Area & Length)
+## 5. Geometry and quantity rules
 
-#### Wall Area
-- Input: wall length (L), height (H), opening list (width, height, type).
-- Formula: `gross = L × H`; `net = gross − Σ(openings dimensions)`.
-- Units: m.
-- Assumption: vertical wall, no floor-to-ceiling adjustment.
-- Correction: if openings > 15% (relative to gross) then flag for check.
-- Check: `net >= 0`.
-- Test: L=10, H=3 → gross=30; subtract door 2×0.9 → 27.3 m².
+### 5.1 Rectangular surface
+For a rectangle with perpendicular sides L and W:
+`A = L × W`
+Validate dimensions are finite and positive. For non-rectangular surfaces, calculate the polygon area from ordered, validated vertices; reject self-intersecting or degenerate polygons unless a supported repair workflow is explicitly approved.
 
-#### Floor Area
-- Input: polygon corner points, openings (none).
-- Formula: `area = Σ(triangular decomposition of polygon)`.
-- Units: m².
-- Assumption: floor plan is rectilinear or polygon.
-- Correction: when it is a variation zone, do not include in main area.
-- Check: area >= 0.
-- Test: square 5×4 → 20 m².
+### 5.2 Wall faces
+For each distinct wall face:
+`GrossFaceArea = FaceLength × FaceHeight`
+`GrossWallArea = Σ(GrossFaceArea)`
 
-#### Ceiling
-- Input: ceiling plan area, moisture path.
-- Formula: `area = floor area + leakage;`
-- Assumption: ceiling follows the floor plan.
-- Correction: The soffit (exposed grating) is calculated in a separate rule.
-- Check: area >= 0.
+Do not multiply by a generic face count unless the input explicitly defines the number of independently measured faces. Opposite faces may differ in openings, finishes, height, or geometry and must be represented separately.
 
-#### Volumes
-- Input: wall lengths, heights, widths.
-- Formula: `volume = Σ(length × height × width)`.
-- Units: m³.
-- Use only when explicitly required.
+### 5.3 Openings
+For a rectangular opening:
+`OpeningArea = Width × Height`
+For repeated identical openings:
+`TotalOpeningArea = Count × Width × Height`
 
-### 5.2 Openings, Deduction and Addition
+Deduct an opening only from the surface/item to which that opening physically applies. Keep the opening identity, dimensions, count, source, and deduction target. Do not apply a universal deduction threshold unless a named measurement standard or contract rule is selected and recorded.
 
-- Opening: a window/door that is subtracted from the wall or ceiling area.
-- Deduction: any cut from the net quantity (opening, furniture, and a permanent structure).
-- Addition: an extra quantity added after review (e.g., extra padding, a repair).
-- Rule: Deduction ≤ gross (a deduction larger than the gross is invalid → flag "needs review").
+### 5.4 Floor area
+For a valid floor polygon, calculate its plan area. Split areas into distinct zones when finishes, levels, materials, or scope differ. Voids/openings are represented as explicit polygons and deducted only where applicable. Variation zones remain separately identified and are included/excluded according to their approved scope status.
 
-### 5.3 Quantities (Waste, Bulk, Net)
+### 5.5 Ceiling area
+Ceiling area must come from the ceiling geometry or an explicitly approved derivation from the corresponding floor/room geometry. It is not universally equal to floor area. Bulkheads, drops, coves, soffits, slopes, voids, and stepped ceilings require separate geometric components. A leakage/perimeter allowance is not added to area by default.
 
-For each item:
+### 5.6 Net, waste, and order quantity
+`Net = Gross − Σ(ApprovedDeductions) + Σ(ApprovedAdditions)`
+`Waste = Net × ApprovedWasteRate`
+`OrderQuantity = ApplyApprovedPackagingAndRounding(Net + Waste)`
 
-```
-Gross  = sum of raw quantities (before deductions)
-Net    = Gross − (deductions) + (additions)
-Waste  = Net × (waste %)
-Bulk   = Net + Waste
-```
+If no approved waste rate exists, return net quantity and mark procurement quantity as not determined. Do not use generic default waste percentages. Negative net, deductions exceeding their applicable gross, or additions without evidence must be flagged.
 
-- Waste %: defaults to a standard (e.g., 5% for masonry, 10% for plastering, 3% for tiling).
-- When the waste % is not provided, the rule uses the default from the library of the item.
-- The rule runs a check: `Bulk >= Net` and `Waste >= 0`.
+## 6. MEP quantities
 
-### 5.4 Units & Conversions
+Electrical, plumbing, drainage, and HVAC quantities require system-specific design inputs. Point counts may be counted from an approved drawing or verified schedule. Cable, conduit, pipe, duct, insulation, and accessory lengths/areas must be measured from routes, dimensions, and system details. Room area alone is not sufficient to determine circuit count, pipe routes, duct sizes, or equipment quantities. Missing design information results in Needs Review/Tentative, not an invented takeoff.
 
-Every rule defines units; the engine converts to canonical units:
-- All lengths → m.
-- All areas → m².
-- All volumes → m³.
-- Counts → number.
-- Weights → kg.
+## 7. Cost calculation boundary
 
-Conversion factors:
-- 1 mm = 0.001 m
-- 1 cm = 0.01 m
-- 1 inch = 25.4 mm
-- 1 ft = 0.3048 m
+Quantities and prices are separate domains. A quantity result does not contain markup.
 
-### 5.5 Recurring Units & Roles
+Recommended cost ledger:
+- Direct materials.
+- Direct labor.
+- Direct equipment/plant.
+- Direct transport or other explicitly classified direct cost.
+- Indirect/project overhead.
+- Engineer/professional fees.
+- Contingency/risk allowance.
+- Profit/markup.
+- Applicable taxes and statutory charges, if in scope.
 
-When the same quantity occurs repeatedly:
-- Example: number of tiles = floor area / tile area.
-- The rule stores the formula and applies it to each element.
+Each percentage or fixed amount must define its calculation base and order. Do not calculate profit on a total that already includes profit. Do not add the same administrative/overhead cost in more than one category. Cost rules require an approved commercial policy before implementation.
 
-### 5.6 Electrical, Sanitary, HVAC Estimations
+## 8. Verification contract
 
-These are **derived estimates** that require adequate source data:
-- Electrical: circuits, points, cable lengths (from drawings, initially estimated by rule).
-- Sanitary: pipe runs, connection points (by the rule of the drawing, not only by AI).
-- HVAC: ductwork, pipes, insulation (by the rule of the drawing).
+The verification path must independently reconstruct expected quantities from source inputs and rule metadata. It must not merely invoke the primary calculation implementation with the same arguments.
 
-Rules exist for each; until there is sufficient data, results are labeled "Tentative".
+Verification checks include:
+- Unit normalization and dimensional consistency.
+- Polygon validity and area bounds.
+- Opening-to-face association and deduction bounds.
+- Reconciliation: Net = Gross − Deductions + Additions.
+- Waste and order quantity basis.
+- Primary-vs-independent result difference against a rule-specific tolerance.
+- Completeness and provenance of inputs.
 
-## 6. Engineering Cost Calculation
+A discrepancy or missing critical evidence changes the result state to Needs Review. Approval is a separate, audited human action.
 
-### 6.1 Unit Price
+## 9. Minimum deterministic test vectors
 
-```
-unit_price = (material + labor + equipment + transport) × (1 + overhead) + profit
-material_cost = quantity × unit_material_price
-labor_cost = quantity × unit_labor_price
-total_item = quantity × (material_unit_price + labor_unit_price + ...)
-```
+| ID | Inputs | Expected |
+|---|---|---|
+| GE-01 | Rectangle 5 m × 4 m | 20 m² |
+| GE-02 | Rectangle 5 m × 4 m | Perimeter 18 m |
+| WALL-01 | One face 10 m × 3 m | Gross 30 m² |
+| OPEN-01 | One rectangular opening 2 m × 0.9 m | 1.8 m² |
+| WALL-02 | Gross 30 m², applicable opening 1.8 m² | Net 28.2 m² |
+| UNIT-01 | 5000 mm | 5 m |
+| UNIT-02 | 3/4 inch | 19.05 mm |
+| NET-01 | Gross 20, deduction 2, addition 1 | Net 19 |
+| WASTE-01 | Net 20, explicitly approved rate 5% | Waste 1; pre-packaging order 21 |
 
-### 6.2 Cost Report
+These are arithmetic fixtures, not evidence of an adopted measurement standard. Production rule tolerances and rounding must be defined per rule.
 
-```
-Direct Cost   = Σ(items)
-Indirect      = Direct × (indirect %)
-Admin         = Direct × (admin %)
-Risk          = Direct × (risk %)  [optional]
-Total         = Direct + Indirect + Admin + Profit
-Profit        = Total × (profit %)
-Client_price  = Total + Profit
-```
+## 10. Non-goals
 
----
-
-## 7. Verification & Test Cases
-
-| Test | Rule | Expected |
-|------|------|----------|
-| TC-GE-01 | Area of square 5×4 | 20 m² |
-| TC-GE-02 | Wall area with opening 2×0.9 | Net = gross − 1.8 |
-| TC-OPEN-01 | Deduction = opening area | Equals opening area |
-| TC-UNIT-01 | mm → m conversion | Correct |
-| TC-WASTE-01 | Waste = Net × %. Check Bulk >= Net | Pass |
-| TC-VF-01 | Sum of net = (sum gross) − (sum deduction) + (sum addition) | Correct |
-
----
-
-## 8. Non-goals
-
-- AI will not produce the final amount without calibration.
-- We will not include architectural standards without checking the source data.
-
----
-
-*Last updated: 12 November 2026*
+- AI-generated quantities without source evidence and deterministic validation.
+- Unreferenced industry defaults.
+- Automatic engineering approval.
+- Claiming DWG/BIM support before format and licensing validation.

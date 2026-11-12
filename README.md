@@ -1,173 +1,104 @@
 # Finishing BOQ & Cost Estimation System
 
-**نظام حصر كميات ومقايسات وتسعير أعمال التشطيبات** — Residential Quantity Surveying & Estimating (Finishing Works)
+**نظام حصر كميات ومقايسات وتسعير أعمال التشطيبات**
 
-## نظرة سريعة
+A planned engineering-focused application for quantity surveying and cost estimation of residential finishing projects (apartments and villas).
 
-برنامج احترافي يحصر كميات المشاريع السكنية (شقق وفيلات) من الرسومات، ويحسب الكميات والكلفة والتسعير، وينتج المقايسة الداخلية والعميلة، مع محرك حساب هندسي مستقل عن الذكاء الاصطناعي، ودعم الواجهات العربية والإنجليزية (RTL/LTR)، وعمل Offline مع مزامنة آمنة.
+> **Project status: preparation and technical audit.** This repository currently contains project documentation and configuration only. It does not yet contain a runnable application, production calculation engine, or executable test suite.
 
-- **التطبيق:** Windows Desktop + Web
-- **اللغات:** Arabic + English (RTL/LTR)
-- **المحرك الحسابي:** Python (deterministic, offline-first)
-- **الواجهة:** React + TypeScript (Tauri 2 desktop, Web)
-- **قاعدة البيانات:** SQLite (local) + PostgreSQL (cloud sync)
-- **مستودع البيانات:** https://github.com/abdos6335-netizen/Finishing-BOQ-System
+## Product objective
 
----
+Turn reviewed architectural information into traceable finishing quantities, internal and client BOQs, cost estimates, and reports.
 
-## 1. معمارية المشروع
+Core requirements:
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                     Web (React + TS)                        │
-│                     Desktop (Tauri 2 + React)               │
-├─────────────────────────────────────────────────────────────┐│
-│                      Presentation Layer                      │
-│  Dashboard · Project · Drawing · BOQ · Cost · Schedule     │
-├─────────────────────────────────────────────────────────────┐│
-│                      Application Layer                       │
-│  Projects · Drawings · BOQ · Cost · Schedule · Reports     │
-├─────────────────────────────────────────────────────────────┐│
-│                    Engineering Core (Python)                 │
-│  Geometry · Quantity · Deductions · Verification · Currency  │
-├─────────────────────────────────────────────────────────────┐│
-│                    Drawing Engine                           │
-│  CAD (DXF/PDF) · OCR · Recognition (images) · BIM          │
-├─────────────────────────────────────────────────────────────┐│
-│                   Data & Sync Layer                         │
-│  SQLite (local) · PostgreSQL (cloud) · Backup · Versioning │
-└─────────────────────────────────────────────────────────────┘
-```
+- Room-by-room and element-by-element quantity surveying.
+- Arabic and English interface with RTL/LTR support.
+- Windows desktop and web delivery targets.
+- Offline-capable workflows with explicit, recoverable synchronization.
+- Deterministic engineering calculations independent of AI.
+- Independent verification of calculated quantities.
+- Traceability from every result to source drawings, dimensions, rules, assumptions, and approvals.
+- No silent approval of uncertain engineering or financial data.
 
-**الهدف:** محرك حساب هندسي Deterministic مستقل عن AI، ونظام مراجعة مزدوج، ونسخة مقايسة داخلية وعميلة منفصلتان، وعمل Offline مع مزامنة آمنة.
+## Non-negotiable engineering principles
 
----
+1. AI may assist with drawing interpretation, OCR, classification, and suggestions. It does not approve or replace the deterministic calculation engine.
+2. A calculation result must retain its input evidence, units, formula/rule version, deductions, additions, assumptions, and verification status.
+3. Waste, deductions, productivity, routing allowances, and engineering defaults require a cited source or explicit project approval.
+4. Missing or ambiguous source information must be surfaced for review rather than converted into invented quantities.
+5. Internal automated verification must precede user acceptance testing.
 
-## 2. الهدف من المشروع
+## Current delivery status
 
-تحويل الرسومات الهندسية إلى حصر كميات ومقايسات (BOQ) قابلة للمراجعة والتدقيق والاعتماد، خاصة في أعمال التشطيبات (شقق وفيلات)، ثم توسيع النطاق للاستخدامات التجارية والإدارية.
+| Area | Status |
+|---|---|
+| Product scope and requirements | Draft; under audit |
+| Architecture and technology selection | Not frozen; decision register in progress |
+| Database design | Draft; requires normalization and sync review |
+| Engineering calculation rules | Draft; corrections required |
+| Application source code | Not started |
+| Executable automated tests | Not started |
+| First usable release | Not available |
 
----
+See [Project Status](docs/PROJECT-STATUS.md), [Four-Phase Execution Plan](docs/ROADMAP/FOUR-PHASE-EXECUTION-PLAN.md), and [Architecture Decision Register](docs/ARCHITECTURE/ARCHITECTURE-DECISION-REGISTER.md).
 
-## 3. ملفات المشروع
+## Planned architecture boundaries
 
-```
-Finishing-BOQ-System/
-├── README.md
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── .editorconfig
-├── .gitignore
-├── docs/
-│   ├── PRODUCT-VISION.md
-│   ├── SRS/
-│   ├── ARCHITECTURE/
-│   ├── ENGINEERING/
-│   ├── QUALITY/
-│   └── ROADMAP/
-├── apps/
-├── backend/
-├── engineering/
-├── drawing_engine/
-├── boq/
-├── costing/
-├── scheduling/
-├── reporting/
-├── database/
-└── tests/
-```
+The design will keep these responsibilities separate:
 
----
+- **Presentation:** desktop and web user experience.
+- **Application services:** projects, drawings, BOQ, costing, schedule, and reporting workflows.
+- **Engineering core:** deterministic geometry, quantity, unit conversion, and validation.
+- **Drawing interpretation:** file import, extraction, OCR, and candidate geometry.
+- **Data and synchronization:** local persistence, remote persistence, audit history, backup, and conflict handling.
 
-## 4. التقنيات والبرمجة
+The implementation technologies are not considered final until the architecture decision register is reviewed and the offline, deployment, security, and licensing constraints are evaluated.
 
-| المكون | التقنية | السبب |
-|--------|---------|-------|
-| Surface Desktop | Tauri 2 + React + TypeScript | خفيف، WinterWG, ويب جميل |
-| Backend API | Python + FastAPI | محرك حصور + خدمة واحدة |
-| Engineering Core | Python | Deterministic، دقة، واختبارات |
-| CAD Processing | ezdxf + PyMuPDF | DXF/PDF |
-| OCR | PaddleOCR / Tesseract | نصوص ورموز |
-| Web UI | React + TypeScript | تجربة مستخدم موحدة |
-| Database | SQLite + PostgreSQL | محلي وسحابي |
-| Tests | Pytest + Playwright | الوحدة والتكامل |
+## Planned capabilities
 
----
+- Project, client, building, floor, unit, room, and zone management.
+- Drawing sets, sheet classification, scale calibration, and revision history.
+- Written-versus-extracted dimension comparison.
+- Finishing quantity takeoff and independently verified calculations.
+- Electrical, plumbing, and HVAC takeoff only where the required design information exists.
+- Separate internal and client BOQs.
+- Material, labor, equipment, supplier, and cost breakdowns.
+- Additional works / variation orders.
+- Productivity, duration, and schedule estimation.
+- Arabic/English PDF and spreadsheet reports.
+- Offline operation, synchronization, backup, and restore.
 
-## 5. حالات الاستخدام
+## Repository structure
 
-- إنشاء مشروع (شقة، فيلا)
-- رفع الرسومات (DXF, PDF, صور)
-- تصنيف اللوحات وإدارة الإصدارات
-- استخراج الأبعاد والخامات
-- حصر Room by Room وElement by Element
-- حصر الكهرباء والصحي والتكييف
-- إنشاء BOQ (داخلية + عميلة)
-- تحليل التكاليف والتسعير
-- الجدولة والانتاجية
-- التقارير والتصدير
-- المزامنة والتشفير والنسخ الاحتياطي
+The folders shown below are planned module boundaries. A folder is not considered implemented merely because it appears in this diagram.
 
----
-
-## 6. إرشادات المساهمة
-
-راجع `CONTRIBUTING.md` للمزيد. قاعدة سريعة:
-
-- **Specs قبل code.** لا تكتب إنتاجي قبل موافقة SRS والاختبارات.
-- **دقة التقنية.** تابع القرارات المدونة في `docs/ARCHITECTURE/`.
-- **محتوى لا شكلي.** كل ملف له هدف تقني.
-- **اختبارات.** كل وحدة لها اختبار مفصّل.
-- **وثيقة مستمرة.** `CHANGELOG.md` و `SECURITY.md` محدثان كل دورة.
-
----
-
-## 7. التوثيق
-
-```
-docs/
-├── PRODUCT-VISION.md
-├── SRS/
-│   └── SOFTWARE-REQUIREMENTS-SPECIFICATION.md
-├── ARCHITECTURE/
-│   ├── SYSTEM-ARCHITECTURE.md
-│   ├── DATABASE-DESIGN.md
-│   ├── ENGINEERING-CALCULATION-ENGINE.md
-│   ├── AI-AND-VERIFICATION-ARCHITECTURE.md
-│   └── SECURITY-AND-DATA-PROTECTION.md
-├── ENGINEERING/
-│   ├── QUANTITY-SURVEYING-RULES.md
-│   ├── MATERIAL-LIBRARY.md
-│   ├── ELECTRICAL-ESTIMATION-RULES.md
-│   ├── PLUMBING-HVAC-ESTIMATION-RULES.md
-│   └── TIME-AND-PRODUCTIVITY-RULES.md
-├── QUALITY/
-│   ├── TESTING-STRATEGY.md
-│   ├── REFERENCE-TEST-PROJECT.md
-│   └── ACCEPTANCE-CRITERIA.md
-└── ROADMAP/
-    ├── DEVELOPMENT-ROADMAP.md
-    └── RELEASE-PLAN.md
+```text
+docs/              Product, requirements, architecture, engineering, QA
+apps/              Desktop and web clients (planned)
+backend/           Application API and services (planned)
+engineering/       Deterministic calculation core (planned)
+drawing_engine/    Drawing import and interpretation (planned)
+boq/               BOQ domain (planned)
+costing/           Cost estimation (planned)
+scheduling/        Productivity and scheduling (planned)
+reporting/         Reports and exports (planned)
+database/          Migrations and persistence (planned)
+tests/             Automated test suite (planned)
 ```
 
----
+## Contributing and change control
 
-## 8. المراحل المقبلة
+- Requirements and engineering rules must be reviewed before dependent production code is written.
+- Every material architecture choice must be recorded as Confirmed, Recommended, or TBD.
+- Substantial work must use feature branches and reviewed pull requests.
+- Never force-push or rewrite shared history.
+- Do not commit client drawings, private project data, credentials, API keys, or local database files.
+- A phase is complete only when its exit criteria are evidenced by implementation and passing checks.
 
-| المرحلة | الهدف | الحالة |
-|---------|-------|--------|
-| 0 | المتطلبات والمعمارية | ✅ مكتملة |
-| 1 | أساس المشروع وقاعدة البيانات | 🚧 قيد التنفيذ |
-| 2 | إدارة المشاريع والرسومات | ⏳ متبقي |
-| 3+ | محرك الحصور والتدقيق والمقايسة | ⏳ متبقي |
+## Links
 
----
-
-## 9. الروابط
-
-- المستودع: https://github.com/abdos6335-netizen/Finishing-BOQ-System
-- الوثائق التقنية: `docs/` (كل ملف في هذا المستودع)
-- المستودع: https://github.com/abdos6335-netizen/Finishing-BOQ-System
-- الوثائق التقنية: `docs/` (كل ملف في هذا المستودع)
-
+- [GitHub repository](https://github.com/abdos6335-netizen/Finishing-BOQ-System)
+- [Project status](docs/PROJECT-STATUS.md)
+- [Four-phase execution plan](docs/ROADMAP/FOUR-PHASE-EXECUTION-PLAN.md)
+- [Architecture decision register](docs/ARCHITECTURE/ARCHITECTURE-DECISION-REGISTER.md)

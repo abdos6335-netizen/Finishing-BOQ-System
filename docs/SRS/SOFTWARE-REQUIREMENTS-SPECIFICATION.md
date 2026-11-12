@@ -223,7 +223,7 @@ Desktop shell, web framework, API framework, local/browser/cloud database, sync 
 
 **TC-GE-01** | Rectangle 5.0 × 4.0 m → area = 20.0 m² (tolerance ±0.01)
 **TC-GE-02** | Rectangle 5.0 × 4.0 m → perimeter = 18.0 m (tolerance ±0.01)
-**TC-GE-03** | Wall 10.0 × 3.0 m with an opening 2.0 × 0.9 m → net area = 27.3 m²
+**TC-GE-03** | One wall face 10.0 × 3.0 m with one applicable opening 2.0 × 0.9 m → gross = 30.0 m²; deduction = 1.8 m²; net = 28.2 m²
 **TC-GE-04** | Floor area with a 2.0 m² variation zone → net = total − variation
 
 ### 5.2 Openings & Deductions

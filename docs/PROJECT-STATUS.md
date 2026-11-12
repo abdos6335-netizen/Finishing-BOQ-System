@@ -5,19 +5,21 @@
 **Default branch:** main  
 **Active implementation branch:** implementation/four-phase-roadmap
 
-## Verified implementation state
+## Verified implementation state (2026-11-13)
 
-The active implementation branch now contains a first runnable web vertical slice:
-- TypeScript + Vite application shell.
-- Local project creation and persistence in browser storage.
-- Room dimension entry and explicit wall-face generation.
-- Deterministic floor, ceiling, gross wall, opening deduction, net wall, and perimeter calculations.
-- Independent arithmetic reconciliation for wall quantities.
-- Arabic/English interface switching and responsive layout.
-- CSV takeoff export.
-- Initial Vitest unit tests and GitHub Actions CI workflow.
+Verified by running `npm test` and `npm run build` locally on this branch: **91 tests in 8 files pass and the production build succeeds.** CI has not been run for this state until it is pushed.
 
-This is a foundation, not the completed product. No successful build or CI result is claimed until the workflow has run and its result is inspected.
+Engines (`src/domain`, framework-free, deterministic, each result carries its source/approval reference):
+- Quantities and BOQ: room quantities, BOQ lines, room-to-BOQ synchronization that preserves commercial approvals, finishing assemblies.
+- Verification: written-vs-extracted dimension comparison and batch dimension audit (blocks dependent quantities).
+- Costing: project cost roll-up with approved adjustments, client view that keeps hidden adjustments inside the total, variation orders with an approval workflow.
+- Time: productivity engine (no built-in rates), CPM with FS/SS/FF and lags, working-day calendar mapping.
+- MEP: takeoff from approved points, circuit schedules and documented cable routes only.
+- Structure: project hierarchy with quantity roll-up.
+- Data: IndexedDB storage with one-time localStorage migration, offline queue with idempotent replay, three-way conflict resolution (protected fields are never auto-resolved).
+- Reports: bilingual (AR/EN) HTML report for print-to-PDF and a dependency-free `.xlsx` export (opened and checked with an independent reader).
+
+The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. The other engines are tested and available as a library but do not have their own screens yet.
 
 ## Three delivery stages
 
@@ -27,12 +29,12 @@ This is a foundation, not the completed product. No successful build or CI resul
 
 ## Current limitations
 
-- No drawing import, DXF/PDF/image extraction, scale calibration, or written-vs-extracted dimension comparison.
-- No per-opening UI or wall-specific geometry editor.
-- No durable database, server API, user authentication/roles, audit log, backup/restore, or cloud synchronization.
-- No full BOQ catalog, pricing engine, variation orders, productivity/scheduling, or professional PDF/Excel reports.
-- No Windows desktop packaging yet.
-- Browser local storage is temporary foundation storage and must not be treated as production-grade project-data persistence.
+- No drawing import, DXF/PDF/image reading, OCR, or scale calibration. Dimension observations must be entered or supplied by a future extraction component.
+- No server, user accounts, roles, or audit log. The sync queue and conflict resolution are implemented and tested against an in-memory reference server only; real cross-device sync needs a backend that implements the `SyncTransport` contract.
+- No screens yet for assemblies, MEP, variation orders, cost adjustments, schedule, or conflict review.
+- PDF output is produced by the browser's print dialog from the HTML report, not by a PDF library.
+- No Windows desktop packaging.
+- No productivity-rate or material-price library: rates and prices must always be entered with a source.
 
 ## Engineering guardrails
 
@@ -44,8 +46,8 @@ This is a foundation, not the completed product. No successful build or CI resul
 
 ## Next implementation work
 
-1. Add detailed wall-face/opening editing and project/building/floor/room hierarchy.
-2. Add persistence abstraction and migration path to durable local database.
-3. Add drawing upload and revision metadata before automated extraction.
-4. Expand deterministic geometry and verification tests using the reference project.
-5. Add BOQ and costing only after the quantity result contract is stable.
+1. Screens for adjustments, assemblies, MEP, variation orders, schedule, and conflict review.
+2. Backend implementing `SyncTransport`, with authentication and roles.
+3. Drawing upload with revision metadata, then DXF/PDF extraction feeding the dimension audit.
+4. Windows packaging (e.g. Tauri) once the web application is stable.
+5. Independent engineering review of the quantity rules against the reference project.

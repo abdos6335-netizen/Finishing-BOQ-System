@@ -2,10 +2,13 @@ import { calculateRoomQuantities, type RoomInput } from "./domain/quantity-engin
 import { calculateBoq, calculateBoqItem, type BoqItemInput, type BoqUnit } from "./domain/boq-engine";
 import { createId, loadProjects, saveProjects, type BuildingCondition, type ProjectRecord } from "./domain/project-store";
 import { generateRoomBoqItems } from "./domain/room-boq-link";
+import { IndexedDbProjectStorage, migrateFromLocalStorage, type ProjectStorage } from "./domain/storage";
+import { buildReportModel, buildXlsx, renderReportHtml } from "./domain/report-export";
 import "./style.css";
 
-let projects = loadProjects();
-let activeProjectId = projects[0]?.id ?? "";
+let projects: ProjectRecord[] = [];
+let activeProjectId = "";
+let storage: ProjectStorage | null = null;
 let language: "ar" | "en" = "ar";
 const copy = {
   ar: {
@@ -13,7 +16,7 @@ const copy = {
     type:"نوع المشروع",apartment:"شقة",villa:"فيلا",buildingCondition:"حالة المبنى",brick:"مبنى على الطوب الأحمر (بدون تشطيب)",renovation:"تجديد وإعادة تشطيب",plaster:"محارة فقط",semiFinished:"نصف تشطيب",fullyFinished:"متشطب بالكامل",alteration:"تعديل تقسيمات داخلية وهدم وبناء جديد",shell:"هيكل خرساني (Concrete Shell)",unspecified:"غير محددة / مشروع قديم",create:"إنشاء المشروع",room:"إضافة غرفة",roomName:"اسم الغرفة",length:"الطول (م)",width:"العرض (م)",
     height:"الارتفاع (م)",addRoom:"حفظ الغرفة",overview:"ملخص المشروع",floor:"مساحة الأرضيات",walls:"صافي الحوائط",ceiling:"مساحة الأسقف",
     gross:"إجمالي الحوائط",deductions:"خصم الفتحات",perimeter:"المحيط",rooms:"الغرف",empty:"ابدأ بإنشاء مشروع ثم أضف الغرف لعرض الحصر.",
-    noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",language:"English",
+    noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",exportXlsx:"تصدير Excel",printReport:"تقرير PDF / طباعة",currencyPrompt:"أدخل عملة التقرير (مثال: EGP):",storageError:"تعذّر حفظ البيانات في قاعدة البيانات المحلية.",language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
     deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة",addRoomTakeoff:"إضافة كميات الغرف للمقايسة",takeoffAdded:"تمت إضافة الكميات الجديدة",takeoffUpdated:"تم تحديث كميات مرتبطة بتغيّر القياسات",takeoffSkipped:"بنود لم تتغير",wallTakeoffReview:"حوائط تحتاج مراجعة",staleWallTakeoff:"بنود حوائط سابقة أصبحت غير محدثة وتحتاج مراجعة"
@@ -23,7 +26,7 @@ const copy = {
     type:"Project type",apartment:"Apartment",villa:"Villa",buildingCondition:"Existing building condition",brick:"Red brick / unfinished",renovation:"Renovation & refit",plaster:"Plaster only",semiFinished:"Semi-finished",fullyFinished:"Fully finished",alteration:"Internal alterations, demolition & new walls",shell:"New concrete shell",unspecified:"Unspecified / legacy project",create:"Create project",room:"Add room",roomName:"Room name",length:"Length (m)",width:"Width (m)",
     height:"Height (m)",addRoom:"Save room",overview:"Project overview",floor:"Floor area",walls:"Net wall area",ceiling:"Ceiling area",
     gross:"Gross walls",deductions:"Opening deductions",perimeter:"Perimeter",rooms:"Rooms",empty:"Create a project, then add rooms to see the takeoff.",
-    noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",language:"العربية",
+    noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",exportXlsx:"Export Excel",printReport:"PDF report / print",currencyPrompt:"Enter the report currency (e.g. EGP):",storageError:"Could not save to the local database.",language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
     deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status",addRoomTakeoff:"Add room quantities to BOQ",takeoffAdded:"New quantities added",takeoffUpdated:"Linked quantities refreshed after measurement changes",takeoffSkipped:"Unchanged items",wallTakeoffReview:"Wall measurements need review",staleWallTakeoff:"Previous wall BOQ snapshots are stale and need review"
@@ -33,7 +36,24 @@ function t(key:keyof typeof copy.ar):string{return copy[language][key];}
 function el<T extends HTMLElement>(selector:string):T{const node=document.querySelector<T>(selector);if(!node)throw new Error(`Missing element: ${selector}`);return node;}
 function escapeHtml(value:string):string{return value.replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]??char));}
 function activeProject():ProjectRecord|undefined{return projects.find(p=>p.id===activeProjectId);}
-function persist():void{saveProjects(projects);render();}
+function persist():void{
+  if(storage){storage.saveMany(projects).catch(()=>alert(t("storageError")));}
+  else saveProjects(projects);
+  render();
+}
+async function initStorage():Promise<void>{
+  try{
+    const db=new IndexedDbProjectStorage();
+    await migrateFromLocalStorage(db);
+    projects=await db.loadAll();
+    storage=db;
+  }catch{
+    // IndexedDB unavailable (e.g. private mode): fall back to the legacy store so nothing is lost.
+    projects=loadProjects();
+  }
+  activeProjectId=projects[0]?.id??"";
+  render();
+}
 
 function render():void{
   document.documentElement.lang=language;document.documentElement.dir=language==="ar"?"rtl":"ltr";
@@ -67,6 +87,8 @@ function render():void{
   document.querySelector<HTMLDivElement>("#room-editor-list")?.addEventListener("submit",editRoom);
   document.querySelector<HTMLDivElement>("#room-editor-list")?.addEventListener("click",removeRoomItem);
   document.querySelector<HTMLButtonElement>("#export-csv")?.addEventListener("click",exportCsv);
+  document.querySelector<HTMLButtonElement>("#export-xlsx")?.addEventListener("click",exportXlsx);
+  document.querySelector<HTMLButtonElement>("#print-report")?.addEventListener("click",printReport);
 }
 function renderProject(project:ProjectRecord):string{
   const results=project.rooms.map(room=>({room,result:calculateRoomQuantities(room)}));
@@ -83,7 +105,7 @@ function renderProject(project:ProjectRecord):string{
           <button class="primary" type="submit">${t("addRoom")}</button>
         </form>
       </div>
-      <div class="panel"><div class="panel-head"><div><span class="eyebrow">PROJECT DATA</span><h2>${t("overview")}</h2></div><button class="outline" id="export-csv">${t("export")}</button></div>
+      <div class="panel"><div class="panel-head"><div><span class="eyebrow">PROJECT DATA</span><h2>${t("overview")}</h2></div><div class="actions"><button class="outline" id="export-csv">${t("export")}</button><button class="outline" id="export-xlsx">${t("exportXlsx")}</button><button class="outline" id="print-report">${t("printReport")}</button></div></div>
         <div class="mini-metrics"><div><span>${t("gross")}</span><strong>${total("wallGrossAreaM2").toFixed(2)} m²</strong></div><div><span>${t("deductions")}</span><strong>${total("openingDeductionM2").toFixed(2)} m²</strong></div></div>
         <div class="room-list"><h3>${t("rooms")} · ${project.rooms.length}</h3>
           ${results.length?results.map(({room,result})=>`<div class="room-row"><div><strong>${escapeHtml(room.name)}</strong><small>${room.lengthM} × ${room.widthM} × ${room.heightM} m · ${room.wallFaces.length} ${t("measuredFaces")}</small></div><div class="room-values"><strong>${result.floorAreaM2.toFixed(2)} m²</strong><small class="${result.verification==="matched"?"good":"warn"}">${result.verification==="matched"?t("verified"):t("review")}</small></div></div>`).join(""):`<p class="muted">${t("noRooms")}</p>`}
@@ -186,4 +208,24 @@ function exportCsv():void{
   const csv="\uFEFF"+rows.map(row=>row.map(value=>`"${value.replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download=`${project.name.replace(/[^\p{L}\p{N}-]+/gu,"-")}-takeoff.csv`;a.click();URL.revokeObjectURL(url);
 }
+function reportInput(project:ProjectRecord){
+  const currency=window.prompt(t("currencyPrompt"))?.trim();
+  if(!currency)return null;
+  return{projectName:project.name,buildingCondition:project.buildingCondition,generatedAt:new Date().toISOString().slice(0,10),currency,rooms:project.rooms,items:project.boqItems,adjustments:[]};
+}
+function exportXlsx():void{
+  const project=activeProject();if(!project)return;
+  const input=reportInput(project);if(!input)return;
+  const bytes=buildXlsx(buildReportModel(input),language);
+  const url=URL.createObjectURL(new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  const a=document.createElement("a");a.href=url;a.download=`${project.name.replace(/[^\p{L}\p{N}-]+/gu,"-")}-boq.xlsx`;a.click();URL.revokeObjectURL(url);
+}
+function printReport():void{
+  const project=activeProject();if(!project)return;
+  const input=reportInput(project);if(!input)return;
+  const html=renderReportHtml(buildReportModel(input),language);
+  const win=window.open("","_blank");if(!win)return;
+  win.document.open();win.document.write(html);win.document.close();win.focus();win.print();
+}
 render();
+void initStorage();

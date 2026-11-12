@@ -12,3 +12,5 @@
 
 /* Room-to-BOQ action */
 .boq-panel .panel-head{gap:16px;flex-wrap:wrap}.boq-panel .panel-head .outline{white-space:nowrap}@media(max-width:640px){.boq-panel .panel-head .outline{width:100%}}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}

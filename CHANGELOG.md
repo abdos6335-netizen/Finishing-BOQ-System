@@ -8,6 +8,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- Domain engines: dimension audit, finishing assemblies, productivity, cost roll-up, variation orders, MEP takeoff, critical path, project hierarchy.
+- IndexedDB project storage with one-time migration from localStorage.
+- Offline sync queue (idempotent replay), in-memory reference server, and three-way conflict resolution.
+- Bilingual HTML report and dependency-free Excel (.xlsx) export; Excel and print/PDF buttons in the UI.
+- 57 new unit and integration tests (91 total), including the 7 workflow scenarios in docs/QUALITY/INTEGRATION-TEST-MATRIX.md.
 - Initial project foundation: README, technical documentation, architecture, and project roadmaps.
 - Core data models: Project, Building, Room, Drawing, BOQ, Item, Cost, Schedule, Audit.
 - Deterministic quantity calculation engine specification.

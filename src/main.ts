@@ -16,7 +16,7 @@ const copy = {
     noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
-    deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة",addRoomTakeoff:"إضافة كميات الغرف للمقايسة",takeoffAdded:"تمت إضافة الكميات الجديدة",takeoffSkipped:"بنود موجودة بالفعل",wallTakeoffReview:"تم تخطي كميات الحوائط التي تحتاج مراجعة"
+    deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة",addRoomTakeoff:"إضافة كميات الغرف للمقايسة",takeoffAdded:"تمت إضافة الكميات الجديدة",takeoffUpdated:"تم تحديث كميات مرتبطة بتغيّر القياسات",takeoffSkipped:"بنود لم تتغير",wallTakeoffReview:"حوائط تحتاج مراجعة",staleWallTakeoff:"بنود حوائط سابقة أصبحت غير محدثة وتحتاج مراجعة"
   },
   en: {
     brand:"FINISHING BOQ",subtitle:"Finishing Quantity Survey & Cost Estimation",projects:"Projects",newProject:"New project",projectName:"Project name",
@@ -26,7 +26,7 @@ const copy = {
     noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
-    deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status",addRoomTakeoff:"Add room quantities to BOQ",takeoffAdded:"New quantities added",takeoffSkipped:"Items already exist",wallTakeoffReview:"Wall quantities needing review were skipped"
+    deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status",addRoomTakeoff:"Add room quantities to BOQ",takeoffAdded:"New quantities added",takeoffUpdated:"Linked quantities refreshed after measurement changes",takeoffSkipped:"Unchanged items",wallTakeoffReview:"Wall measurements need review",staleWallTakeoff:"Previous wall BOQ snapshots are stale and need review"
   }
 };
 function t(key:keyof typeof copy.ar):string{return copy[language][key];}
@@ -143,8 +143,13 @@ function addRoomTakeoff():void{
   const project=activeProject();if(!project)return;
   try{
     const result=generateRoomBoqItems(project.rooms,project.boqItems,createId);
-    if(result.addedItems.length){project.boqItems.push(...result.addedItems);persist();}
-    const message=`${t("takeoffAdded")}: ${result.addedItems.length} · ${t("takeoffSkipped")}: ${result.alreadyPresentCount} · ${t("wallTakeoffReview")}: ${result.wallReviewCount}`;
+    if(result.addedItems.length || result.updatedItems.length){
+      const updatedById=new Map(result.updatedItems.map(item=>[item.id,item]));
+      project.boqItems=project.boqItems.map(item=>updatedById.get(item.id)??item);
+      project.boqItems.push(...result.addedItems);
+      persist();
+    }
+    const message=`${t("takeoffAdded")}: ${result.addedItems.length} · ${t("takeoffUpdated")}: ${result.updatedItems.length} · ${t("takeoffSkipped")}: ${result.alreadyPresentCount} · ${t("wallTakeoffReview")}: ${result.wallReviewCount} · ${t("staleWallTakeoff")}: ${result.staleWallSourceRefs.length}`;
     window.alert(message);
   }catch(error){window.alert(error instanceof Error?error.message:t("createError"));}
 }

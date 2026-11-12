@@ -3,23 +3,25 @@ import type { BoqItemInput } from "./boq-engine";
 
 export interface RoomBoqLinkResult {
   addedItems: BoqItemInput[];
+  updatedItems: BoqItemInput[];
   alreadyPresentCount: number;
   wallReviewCount: number;
+  staleWallSourceRefs: string[];
 }
 
-/**
- * Creates traceable, unpriced BOQ lines from room geometry.
- * It never assigns finishes, waste, or rates. Wall areas are linked only
- * when explicitly measured wall faces pass the quantity engine checks.
- * Existing source references are treated as snapshots and are never duplicated.
- */
+const SOURCE_PREFIX = "room:";
+const WALL_KIND = "net-wall-area";
+
+/** Synchronizes measured geometry snapshots while preserving commercial approvals. */
 export function generateRoomBoqItems(
   rooms: RoomInput[],
   existingItems: BoqItemInput[],
   createId: () => string
 ): RoomBoqLinkResult {
-  const existingSources = new Set(existingItems.map(item => item.sourceRef));
+  const existingBySource = new Map(existingItems.map(item => [item.sourceRef, item]));
   const addedItems: BoqItemInput[] = [];
+  const updatedItems: BoqItemInput[] = [];
+  const staleWallSourceRefs: string[] = [];
   let alreadyPresentCount = 0;
   let wallReviewCount = 0;
 
@@ -31,35 +33,54 @@ export function generateRoomBoqItems(
       { kind: "ceiling-area", suffix: "CLG", description: `Measured ceiling area — ${room.name} (finish unspecified)`, quantity: result.ceilingAreaM2 }
     ];
 
+    const wallSourceRef = `${SOURCE_PREFIX}${encodeURIComponent(room.id)}:takeoff:v1:${WALL_KIND}`;
     if (room.wallFaces.length > 0 && result.verification === "matched") {
       candidates.push({
-        kind: "net-wall-area",
+        kind: WALL_KIND,
         suffix: "WAL",
         description: `Measured net wall area — ${room.name} (finish unspecified)`,
         quantity: result.wallNetAreaM2
       });
     } else {
       wallReviewCount += 1;
+      if (existingBySource.has(wallSourceRef)) staleWallSourceRefs.push(wallSourceRef);
     }
 
     for (const candidate of candidates) {
-      const sourceRef = `room:${encodeURIComponent(room.id)}:takeoff:v1:${candidate.kind}`;
-      if (existingSources.has(sourceRef)) {
-        alreadyPresentCount += 1;
+      const sourceRef = `${SOURCE_PREFIX}${encodeURIComponent(room.id)}:takeoff:v1:${candidate.kind}`;
+      const existing = existingBySource.get(sourceRef);
+      const code = `RT-${roomToken}-${candidate.suffix}`;
+      if (existing) {
+        const changed = existing.netQuantity !== candidate.quantity ||
+          existing.description !== candidate.description ||
+          existing.code !== code || existing.unit !== "m2";
+        if (changed) {
+          updatedItems.push({
+            ...existing, code, description: candidate.description,
+            unit: "m2", netQuantity: candidate.quantity, sourceRef
+          });
+        } else {
+          alreadyPresentCount += 1;
+        }
         continue;
       }
-      const item: BoqItemInput = {
-        id: createId(),
-        code: `RT-${roomToken}-${candidate.suffix}`,
-        description: candidate.description,
-        unit: "m2",
-        netQuantity: candidate.quantity,
-        sourceRef
-      };
-      addedItems.push(item);
-      existingSources.add(sourceRef);
+      addedItems.push({
+        id: createId(), code, description: candidate.description,
+        unit: "m2", netQuantity: candidate.quantity, sourceRef
+      });
     }
   }
 
-  return { addedItems, alreadyPresentCount, wallReviewCount };
+  const currentRoomIds = new Set(rooms.map(room => room.id));
+  for (const item of existingItems) {
+    if (!item.sourceRef.startsWith(SOURCE_PREFIX) || !item.sourceRef.endsWith(`:${WALL_KIND}`)) continue;
+    const encodedId = item.sourceRef.slice(SOURCE_PREFIX.length).split(":takeoff:v1:")[0];
+    let roomId = encodedId;
+    try { roomId = decodeURIComponent(encodedId); } catch { /* keep original token */ }
+    if (!currentRoomIds.has(roomId) && !staleWallSourceRefs.includes(item.sourceRef)) {
+      staleWallSourceRefs.push(item.sourceRef);
+    }
+  }
+
+  return { addedItems, updatedItems, alreadyPresentCount, wallReviewCount, staleWallSourceRefs };
 }

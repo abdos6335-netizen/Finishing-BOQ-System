@@ -1,60 +1,51 @@
 # Finishing BOQ & Cost Estimation System — Project Status
 
-**Current status:** Phase 1 — technical audit and requirements baseline  
-**Current version:** 0.1.0-preparation  
+**Delivery stage:** 1 of 3 — Build the usable application  
+**Current version:** 0.1.0-foundation  
 **Default branch:** main  
-**Active planning branch:** implementation/four-phase-roadmap
+**Active implementation branch:** implementation/four-phase-roadmap
 
-## Verified repository state
+## Verified implementation state
 
-The repository currently contains documentation and configuration files. There is no runnable application source, production engineering engine, database migration set, or executable automated test suite yet.
+The active implementation branch now contains a first runnable web vertical slice:
+- TypeScript + Vite application shell.
+- Local project creation and persistence in browser storage.
+- Room dimension entry and explicit wall-face generation.
+- Deterministic floor, ceiling, gross wall, opening deduction, net wall, and perimeter calculations.
+- Independent arithmetic reconciliation for wall quantities.
+- Arabic/English interface switching and responsive layout.
+- CSV takeoff export.
+- Initial Vitest unit tests and GitHub Actions CI workflow.
 
-The four-phase plan is documented in [FOUR-PHASE-EXECUTION-PLAN.md](ROADMAP/FOUR-PHASE-EXECUTION-PLAN.md).
+This is a foundation, not the completed product. No successful build or CI result is claimed until the workflow has run and its result is inspected.
 
-## Objective
+## Three delivery stages
 
-Build a professional quantity surveying and cost estimation application for residential finishing projects, including apartments and villas.
+1. **Build:** complete drawing intake and review, calculation engine, independent verification, BOQ, costing, productivity, reports, durable data, offline sync, security, and Windows/Web delivery.
+2. **Review:** audit code against every approved requirement, validate engineering rules, run automated/integration/security/recovery tests, and resolve defects.
+3. **Trial release:** publish a controlled web preview and Windows trial package only after review gates pass.
 
-## Core principles
+## Current limitations
 
-- Deterministic engineering calculations independent from AI.
-- An independently designed verification path.
-- Traceability of drawing evidence, dimensions, formulas, assumptions, rule versions, and approvals.
-- Revision-controlled drawings and BOQs with audit history.
-- Offline-capable operation with explicit and recoverable synchronization.
-- Arabic and English interface with RTL/LTR.
-- No automatic approval of uncertain engineering or financial data.
-- Internal tests before user acceptance testing.
+- No drawing import, DXF/PDF/image extraction, scale calibration, or written-vs-extracted dimension comparison.
+- No per-opening UI or wall-specific geometry editor.
+- No durable database, server API, user authentication/roles, audit log, backup/restore, or cloud synchronization.
+- No full BOQ catalog, pricing engine, variation orders, productivity/scheduling, or professional PDF/Excel reports.
+- No Windows desktop packaging yet.
+- Browser local storage is temporary foundation storage and must not be treated as production-grade project-data persistence.
 
-## Four delivery phases
+## Engineering guardrails
 
-1. **Technical audit and engineering baseline:** reconcile documents, correct unsupported rules, freeze scope, and record architecture decisions.
-2. **Application foundation and data lifecycle:** application shell, project/drawing management, persistence, audit, backup, and sync design.
-3. **Drawing intelligence and engineering core:** drawing extraction, dimension comparison, deterministic quantities, and independent verification.
-4. **BOQ, costing, productivity, reporting, hardening, and first release.**
+- Deterministic calculations remain independent from AI.
+- Inputs must be explicit; no guessed dimensions or unapproved waste factors.
+- Every result must eventually link to drawing evidence, dimensions, formula/rule version, assumptions, and verification status.
+- Independent verification must use a separately designed calculation path.
+- User acceptance testing starts only after a usable release candidate exists.
 
-## Current work
+## Next implementation work
 
-- Consolidating the four-phase plan.
-- Auditing formulas and removing unsupported default assumptions.
-- Recording technology choices and unresolved decisions.
-- Defining a practical foundation backlog and internal test gates.
-
-## Important rules
-
-- Planning is not implementation.
-- A phase is complete only after implementation evidence and verification.
-- No private client drawings, project information, credentials, API keys, or secrets may be committed to this public repository.
-- Synthetic test data must be labeled and kept separate from verified drawing data.
-- The user is not asked to perform acceptance testing until a usable release candidate exists.
-
-## Reference test project
-
-Kitchen + Laundry is the initial reference scope. Any synthetic dimensions must be explicitly labeled as synthetic and must never be represented as measurements from an actual drawing.
-
-## Known blockers
-
-- Final desktop/web architecture and packaging model are not yet selected.
-- Data synchronization and conflict semantics require a detailed design before multi-device editing is enabled.
-- Engineering standards, waste factors, and productivity rates require sources or project-specific approval.
-- No application code or executable tests exist yet.
+1. Add detailed wall-face/opening editing and project/building/floor/room hierarchy.
+2. Add persistence abstraction and migration path to durable local database.
+3. Add drawing upload and revision metadata before automated extraction.
+4. Expand deterministic geometry and verification tests using the reference project.
+5. Add BOQ and costing only after the quantity result contract is stable.

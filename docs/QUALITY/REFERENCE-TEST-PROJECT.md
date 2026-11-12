@@ -19,16 +19,20 @@ Kitchen + Laundry is the first reference project for testing the system. Scope: 
 
 ## 3. Data
 
-Where the drawing is not a reliable reference, we use **synthetic explicit data**.
+Two fixture classes must remain separate:
 
-| Item | Value |
-|------|-------|
-| Room | Kitchen + Laundry |
-| Floor area | 12 m² (kitchen) + 8 m² (laundry), synthetic |
-| Wall height | 2.8 m |
-| Door | 2.0 × 0.9 m |
-| Variation | 1.5 m² (synthetic) |
-| Materials | Synthetic unit data marked as such |
+- **Verified Drawing Data:** dimensions and geometry extracted from an authorized, traceable drawing with sheet/revision references and review status.
+- **Synthetic Test Data:** deliberately constructed inputs used only to test deterministic arithmetic and software behavior. Synthetic values are never presented as measurements from a real project or as engineering standards.
+
+| Fixture field | Synthetic fixture value | Status |
+|---|---:|---|
+| Room scope | Kitchen + Laundry | Synthetic fixture label |
+| Kitchen floor area | 12 m² | Synthetic; not drawing-derived |
+| Laundry floor area | 8 m² | Synthetic; not drawing-derived |
+| Wall height | 2.8 m | Synthetic; not drawing-derived |
+| Door size | 2.0 × 0.9 m | Synthetic; not drawing-derived |
+| Variation zone | 1.5 m² | Synthetic; not drawing-derived |
+| Material rates | Not specified | Must not be invented |
 
 ---
 

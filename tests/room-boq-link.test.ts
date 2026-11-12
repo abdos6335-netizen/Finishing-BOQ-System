@@ -25,8 +25,8 @@ describe("room geometry to BOQ linking", () => {
   });
 
   it("does not create wall quantity when wall faces are missing or fail verification", () => {
-    const noFaces = { ...kitchen, wallFaces: [] };
-    const invalidFace = { ...kitchen, wallFaces: [{ id: "short", lengthM: 1, heightM: 1, openings: [{ id: "too-wide", widthM: 2, heightM: 1, deductionEnabled: true }] }] };
+    const noFaces = { ...kitchen, id: "kitchen-no-faces", wallFaces: [] };
+    const invalidFace = { ...kitchen, id: "kitchen-invalid-face", wallFaces: [{ id: "short", lengthM: 1, heightM: 1, openings: [{ id: "too-wide", widthM: 2, heightM: 1, deductionEnabled: true }] }] };
     const result = generateRoomBoqItems([noFaces, invalidFace], [], () => "new-id");
     expect(result.addedItems).toHaveLength(4);
     expect(result.addedItems.every(item => !item.sourceRef.endsWith("net-wall-area"))).toBe(true);

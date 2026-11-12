@@ -1,6 +1,7 @@
 import { calculateRoomQuantities, type RoomInput } from "./domain/quantity-engine";
 import { calculateBoq, calculateBoqItem, type BoqItemInput, type BoqUnit } from "./domain/boq-engine";
 import { createId, loadProjects, saveProjects, type BuildingCondition, type ProjectRecord } from "./domain/project-store";
+import { generateRoomBoqItems } from "./domain/room-boq-link";
 import "./style.css";
 
 let projects = loadProjects();
@@ -15,7 +16,7 @@ const copy = {
     noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
-    deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة"
+    deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة",addRoomTakeoff:"إضافة كميات الغرف للمقايسة",takeoffAdded:"تمت إضافة الكميات الجديدة",takeoffSkipped:"بنود موجودة بالفعل",wallTakeoffReview:"تم تخطي كميات الحوائط التي تحتاج مراجعة"
   },
   en: {
     brand:"FINISHING BOQ",subtitle:"Finishing Quantity Survey & Cost Estimation",projects:"Projects",newProject:"New project",projectName:"Project name",
@@ -25,7 +26,7 @@ const copy = {
     noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
-    deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status"
+    deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status",addRoomTakeoff:"Add room quantities to BOQ",takeoffAdded:"New quantities added",takeoffSkipped:"Items already exist",wallTakeoffReview:"Wall quantities needing review were skipped"
   }
 };
 function t(key:keyof typeof copy.ar):string{return copy[language][key];}
@@ -61,6 +62,7 @@ function render():void{
   document.querySelector<HTMLFormElement>("#project-form")?.addEventListener("submit",createProject);
   document.querySelector<HTMLFormElement>("#room-form")?.addEventListener("submit",addRoom);
   document.querySelector<HTMLFormElement>("#boq-form")?.addEventListener("submit",addBoqItem);
+  document.querySelector<HTMLButtonElement>("#add-room-takeoff")?.addEventListener("click",addRoomTakeoff);
   document.querySelector<HTMLDivElement>("#boq-items")?.addEventListener("click",removeBoqItem);
   document.querySelector<HTMLDivElement>("#room-editor-list")?.addEventListener("submit",editRoom);
   document.querySelector<HTMLDivElement>("#room-editor-list")?.addEventListener("click",removeRoomItem);
@@ -95,7 +97,7 @@ function renderProject(project:ProjectRecord):string{
 function renderBoq(project:ProjectRecord):string{
   const summary=calculateBoq(project.boqItems);
   const rows=summary.items.map(item=>"<tr><td>"+escapeHtml(item.code)+"</td><td>"+escapeHtml(item.description)+"<small>"+escapeHtml(item.sourceRef)+"</small></td><td>"+item.netQuantity.toFixed(2)+" "+item.unit+"</td><td>"+(item.wasteRatePct===null?"—":item.wasteRatePct+"%")+"</td><td>"+(item.unitRate===null?"—":item.unitRate.toFixed(2))+"</td><td>"+(item.lineTotal===null?"—":item.lineTotal.toFixed(2))+"</td><td class=\""+(item.status==="verified"?"good":"warn")+"\">"+(item.status==="verified"?t("verified"):t("review"))+"</td><td><button class=\"text-button danger\" data-remove-boq=\""+escapeHtml(item.id)+"\">"+t("removeItem")+"</button></td></tr>").join("");
-  return "<section class=\"panel boq-panel\"><div class=\"panel-head\"><div><span class=\"eyebrow\">COST ESTIMATION</span><h2>"+t("boq")+"</h2></div></div>"+
+  return "<section class=\"panel boq-panel\"><div class=\"panel-head\"><div><span class=\"eyebrow\">COST ESTIMATION</span><h2>"+t("boq")+"</h2></div><button class=\"outline\" id=\"add-room-takeoff\" type=\"button\">"+t("addRoomTakeoff")+"</button></div>"+
     "<form id=\"boq-form\" class=\"boq-form\"><label>"+t("boqCode")+"<input name=\"code\" required maxlength=\"40\"></label><label>"+t("boqDescription")+"<input name=\"description\" required maxlength=\"180\"></label><label>"+t("boqUnit")+"<select name=\"unit\"><option value=\"m\">m</option><option value=\"m2\">m²</option><option value=\"m3\">m³</option><option value=\"pcs\">pcs</option></select></label><label>"+t("boqQuantity")+"<input name=\"netQuantity\" type=\"number\" min=\"0\" step=\"0.0001\" required></label><label>"+t("boqSource")+"<input name=\"sourceRef\" required maxlength=\"160\"></label><label>"+t("wasteRate")+"<input name=\"approvedWasteRatePct\" type=\"number\" min=\"0\" step=\"0.01\"></label><label>"+t("wasteApproval")+"<input name=\"wasteApprovalRef\" maxlength=\"160\"></label><label>"+t("unitRate")+"<input name=\"unitRate\" type=\"number\" min=\"0\" step=\"0.01\"></label><label>"+t("rateSource")+"<input name=\"rateSourceRef\" maxlength=\"160\"></label><label>"+t("costBasis")+"<select name=\"costQuantityBasis\"><option value=\"net\">"+t("netBasis")+"</option><option value=\"order\">"+t("orderBasis")+"</option></select></label><button class=\"primary\" type=\"submit\">"+t("addBoq")+"</button></form>"+
     "<div class=\"boq-summary\"><div><span>"+t("subtotal")+"</span><strong>"+summary.pricedSubtotal.toFixed(2)+"</strong></div><div><span>"+t("unpriced")+"</span><strong>"+summary.unpricedItems+"</strong></div></div>"+
     "<div id=\"boq-items\" class=\"boq-table-wrap\"><table class=\"boq-table\"><thead><tr><th>"+t("boqCode")+"</th><th>"+t("boqDescription")+"</th><th>"+t("boqQuantity")+"</th><th>"+t("wasteRate")+"</th><th>"+t("unitRate")+"</th><th>"+t("lineTotal")+"</th><th>"+t("boqStatus")+"</th><th></th></tr></thead><tbody>"+(rows||"<tr><td colspan=\"8\" class=\"muted\">—</td></tr>")+"</tbody></table></div><p class=\"hint\">"+(language==="ar"?"لا يتم افتراض الهالك أو الأسعار. يلزم مرجع اعتماد مستقل للهالك ومرجع مصدر لكل سعر.":"Waste and rates are never assumed. Waste approval and rate source references are required.")+"</p></section>";
@@ -136,6 +138,15 @@ function addBoqItem(event:SubmitEvent):void{
   if(wasteRaw!==""){item.approvedWasteRatePct=Number(wasteRaw);item.wasteApprovalRef=String(data.get("wasteApprovalRef")??"").trim();}
   if(rateRaw!==""){item.unitRate=Number(rateRaw);item.rateSourceRef=String(data.get("rateSourceRef")??"").trim();item.costQuantityBasis=String(data.get("costQuantityBasis")??"net") as "net"|"order";}
   try{calculateBoqItem(item);project.boqItems.push(item);persist();}catch(error){window.alert(error instanceof Error?error.message:t("createError"));}
+}
+function addRoomTakeoff():void{
+  const project=activeProject();if(!project)return;
+  try{
+    const result=generateRoomBoqItems(project.rooms,project.boqItems,createId);
+    if(result.addedItems.length){project.boqItems.push(...result.addedItems);persist();}
+    const message=`${t("takeoffAdded")}: ${result.addedItems.length} · ${t("takeoffSkipped")}: ${result.alreadyPresentCount} · ${t("wallTakeoffReview")}: ${result.wallReviewCount}`;
+    window.alert(message);
+  }catch(error){window.alert(error instanceof Error?error.message:t("createError"));}
 }
 function removeBoqItem(event:MouseEvent):void{
   const target=event.target;if(!(target instanceof HTMLElement))return;const button=target.closest<HTMLButtonElement>("[data-remove-boq]");if(!button)return;

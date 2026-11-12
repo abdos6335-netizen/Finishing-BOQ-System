@@ -1,0 +1,46 @@
+# EditorConfig
+
+Root = true
+
+# Convert tabs to spaces
+indent_style = space
+
+# Indent size
+indent_size = 2
+
+# End of line
+end_of_line = lf
+
+# Charset
+charset = utf-8
+
+# Trim trailing whitespace
+trim_trailing_whitespace = true
+
+# Insert final newline
+insert_final_newline = true
+
+# General files
+[*.{js,ts,tsx,json,yaml,yml,md,css,html,xml,prettierrc}]
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+insert_final_newline = true

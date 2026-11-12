@@ -1,6 +1,6 @@
 import type { RoomInput } from "./quantity-engine";
 
-export interface ProjectRecord {
+export type BuildingCondition =\n  | "red-brick"\n  | "renovation"\n  | "plaster-only"\n  | "semi-finished"\n  | "fully-finished"\n  | "alteration"\n  | "concrete-shell"\n  | "unspecified";\n\nexport interface ProjectRecord {
   id: string;
   name: string;
   projectType: string;

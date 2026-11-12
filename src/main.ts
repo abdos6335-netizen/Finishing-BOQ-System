@@ -1,5 +1,5 @@
 import { calculateRoomQuantities, type RoomInput } from "./domain/quantity-engine";
-import { createId, loadProjects, saveProjects, type ProjectRecord } from "./domain/project-store";
+import { createId, loadProjects, saveProjects, type BuildingCondition, type ProjectRecord } from "./domain/project-store";
 import "./style.css";
 
 let projects = loadProjects();
@@ -8,7 +8,7 @@ let language: "ar" | "en" = "ar";
 const copy = {
   ar: {
     brand:"FINISHING BOQ",subtitle:"نظام حصر كميات ومقايسات التشطيبات",projects:"المشروعات",newProject:"مشروع جديد",projectName:"اسم المشروع",
-    type:"نوع المشروع",apartment:"شقة",villa:"فيلا",create:"إنشاء المشروع",room:"إضافة غرفة",roomName:"اسم الغرفة",length:"الطول (م)",width:"العرض (م)",
+    type:"نوع المشروع",apartment:"شقة",villa:"فيلا",buildingCondition:"حالة المبنى",brick:"مبنى على الطوب الأحمر (بدون تشطيب)",renovation:"تجديد وإعادة تشطيب",plaster:"محارة فقط",semiFinished:"نصف تشطيب",fullyFinished:"متشطب بالكامل",alteration:"تعديل تقسيمات داخلية وهدم وبناء جديد",shell:"هيكل خرساني (Concrete Shell)",unspecified:"غير محددة / مشروع قديم",create:"إنشاء المشروع",room:"إضافة غرفة",roomName:"اسم الغرفة",length:"الطول (م)",width:"العرض (م)",
     height:"الارتفاع (م)",addRoom:"حفظ الغرفة",overview:"ملخص المشروع",floor:"مساحة الأرضيات",walls:"صافي الحوائط",ceiling:"مساحة الأسقف",
     gross:"إجمالي الحوائط",deductions:"خصم الفتحات",perimeter:"المحيط",rooms:"الغرف",empty:"ابدأ بإنشاء مشروع ثم أضف الغرف لعرض الحصر.",
     noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",language:"English",
@@ -18,7 +18,7 @@ const copy = {
   },
   en: {
     brand:"FINISHING BOQ",subtitle:"Finishing Quantity Survey & Cost Estimation",projects:"Projects",newProject:"New project",projectName:"Project name",
-    type:"Project type",apartment:"Apartment",villa:"Villa",create:"Create project",room:"Add room",roomName:"Room name",length:"Length (m)",width:"Width (m)",
+    type:"Project type",apartment:"Apartment",villa:"Villa",buildingCondition:"Existing building condition",brick:"Red brick / unfinished",renovation:"Renovation & refit",plaster:"Plaster only",semiFinished:"Semi-finished",fullyFinished:"Fully finished",alteration:"Internal alterations, demolition & new walls",shell:"New concrete shell",unspecified:"Unspecified / legacy project",create:"Create project",room:"Add room",roomName:"Room name",length:"Length (m)",width:"Width (m)",
     height:"Height (m)",addRoom:"Save room",overview:"Project overview",floor:"Floor area",walls:"Net wall area",ceiling:"Ceiling area",
     gross:"Gross walls",deductions:"Opening deductions",perimeter:"Perimeter",rooms:"Rooms",empty:"Create a project, then add rooms to see the takeoff.",
     noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",language:"العربية",
@@ -47,7 +47,7 @@ function render():void{
       <header class="topbar"><div><span class="eyebrow">QUANTITY SURVEYING</span><h1>${project?escapeHtml(project.name):t("brand")}</h1></div><span class="status">LOCAL PREVIEW</span></header>
       <section id="new-project-panel" class="panel form-panel hidden"><h2>${t("newProject")}</h2><form id="project-form" class="form-grid">
         <label>${t("projectName")}<input name="name" required maxlength="100"/></label>
-        <label>${t("type")}<select name="type"><option value="apartment">${t("apartment")}</option><option value="villa">${t("villa")}</option></select></label>
+        <label>${t("type")}<select name="type"><option value="apartment">${t("apartment")}</option><option value="villa">${t("villa")}</option></select></label>\n        <label>${t("buildingCondition")}<select name="buildingCondition" required><option value="" disabled selected>${t("buildingCondition")}</option><option value="red-brick">${t("brick")}</option><option value="renovation">${t("renovation")}</option><option value="plaster-only">${t("plaster")}</option><option value="semi-finished">${t("semiFinished")}</option><option value="fully-finished">${t("fullyFinished")}</option><option value="alteration">${t("alteration")}</option><option value="concrete-shell">${t("shell")}</option></select></label>
         <button class="primary" type="submit">${t("create")}</button>
       </form></section>
       ${project?renderProject(project):`<section class="welcome panel"><div class="welcome-icon">⌂</div><h2>${t("brand")}</h2><p>${t("empty")}</p><button class="primary" id="welcome-create">${t("newProject")}</button></section>`}
@@ -109,7 +109,7 @@ function renderRoomEditor(room:RoomInput):string{
 function stat(label:string,value:number,unit:string,index:string):string{return `<article class="stat-card"><span class="stat-index">${index}</span><span class="stat-label">${label}</span><strong>${value.toFixed(2)} <small>${unit}</small></strong></article>`;}
 function createProject(event:SubmitEvent):void{
   event.preventDefault();const data=new FormData(event.currentTarget as HTMLFormElement);const name=String(data.get("name")??"").trim();if(!name)return;
-  const project:ProjectRecord={id:createId(),name,projectType:String(data.get("type")??"apartment"),createdAt:new Date().toISOString(),rooms:[]};
+  const project:ProjectRecord={id:createId(),name,projectType:String(data.get("type")??"apartment"),buildingCondition:String(data.get("buildingCondition")??"unspecified") as BuildingCondition,createdAt:new Date().toISOString(),rooms:[]};
   projects=[...projects,project];activeProjectId=project.id;persist();
 }
 function addRoom(event:SubmitEvent):void{

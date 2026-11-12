@@ -8,7 +8,8 @@ const project: ProjectRecord = {
   projectType: "apartment",
   buildingCondition: "renovation",
   createdAt: "2026-11-12T10:00:00.000Z",
-  rooms: []
+  rooms: [],
+  boqItems: []
 };
 
 function mockStorage(initial: string | null = null) {
@@ -44,7 +45,7 @@ describe("project storage and legacy migration", () => {
     expect(loadProjects()).toEqual([{
       id: "legacy", name: "Old project", projectType: "villa",
       buildingCondition: "unspecified",
-      createdAt: "2025-01-01T00:00:00.000Z", rooms: []
+      createdAt: "2025-01-01T00:00:00.000Z", rooms: [], boqItems: []
     }]);
   });
 

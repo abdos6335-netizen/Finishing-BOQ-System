@@ -1,4 +1,5 @@
 import type { RoomInput } from "./quantity-engine";
+import type { BoqItemInput } from "./boq-engine";
 
 export type BuildingCondition =
   | "red-brick"
@@ -19,6 +20,7 @@ export interface ProjectRecord {
   buildingCondition: BuildingCondition;
   createdAt: string;
   rooms: RoomInput[];
+  boqItems: BoqItemInput[];
 }
 
 const STORAGE_KEY = "finishing-boq.projects.v1";
@@ -29,6 +31,14 @@ const BUILDING_CONDITIONS = new Set<BuildingCondition>([
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBoqItem(value: unknown): value is BoqItemInput {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string" && typeof value.code === "string" &&
+    typeof value.description === "string" &&
+    ["m", "m2", "m3", "pcs"].includes(String(value.unit)) &&
+    typeof value.netQuantity === "number" && typeof value.sourceRef === "string";
 }
 
 function isRoom(value: unknown): value is RoomInput {
@@ -58,7 +68,8 @@ export function loadProjects(): ProjectRecord[] {
           typeof item.name !== "string" ||
           typeof item.createdAt !== "string" ||
           !Array.isArray(item.rooms) ||
-          !item.rooms.every(isRoom)) return [];
+          !item.rooms.every(isRoom) ||
+          (item.boqItems !== undefined && (!Array.isArray(item.boqItems) || !item.boqItems.every(isBoqItem)))) return [];
 
       const projectType: ProjectType =
         item.projectType === "villa" ? "villa" : "apartment";
@@ -72,7 +83,8 @@ export function loadProjects(): ProjectRecord[] {
         projectType,
         buildingCondition,
         createdAt: item.createdAt,
-        rooms: item.rooms
+        rooms: item.rooms,
+        boqItems: Array.isArray(item.boqItems) ? item.boqItems : []
       }];
     });
   } catch {

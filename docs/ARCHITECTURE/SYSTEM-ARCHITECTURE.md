@@ -32,7 +32,7 @@ Data & Sync (SQLite local + PostgreSQL cloud)
 ## 4. Technology & Platform Comparison
 
 | Area | Status | Candidate / constraint | Open evaluation |
-|------|--------|-----------|-------------------------------------|-------------|
+|------|--------|------------------------|------------------|
 | Desktop | TBD | Tauri, Electron, and native Windows are candidates | Python engine packaging, installer/update/signing, Windows compatibility, support burden |
 | Engineering core | Recommended: Python candidate | Python ecosystem is suitable for geometry and calculation prototypes | Runtime packaging, performance, licensing, and deployment must be tested |
 | Web UI | TBD | Shared typed web UI is a candidate | RTL/accessibility, offline storage, deployment, maintainability |
@@ -75,8 +75,7 @@ Full model and relationships are in `docs/ARCHITECTURE/DATABASE-DESIGN.md`.
 ## 7. Interfaces
 
 - **Desktop:** a desktop shell must invoke the shared engineering core through a supported local interface; shell and interface remain TBD.
-  - `dev` mode: local API UI for generation.
-  - `prod` mode: self-hosted API or connected to cloud API.
+  - Development and production process topology must be proven in the packaging spike.
 - **Web:** the browser client must call the same versioned calculation contract through an authenticated application service.
 - **API:** versioned JSON contract is recommended; REST versus RPC details remain TBD.
 
@@ -84,8 +83,8 @@ Full model and relationships are in `docs/ARCHITECTURE/DATABASE-DESIGN.md`.
 
 | Environment | Desktop | Web |
 |-------------|---------|-----|
-| Development | `tauri dev` / `npm run dev` (api locally) | `npm run dev` ↔ local API |
-| Production | Tauri package (tauri build) | Hosted site, connects to cloud API |
+| Development | To be selected after architecture spike | To be selected after architecture spike |
+| Production | Windows packaging and update path TBD | Hosting and API deployment TBD |
 
 ---
 

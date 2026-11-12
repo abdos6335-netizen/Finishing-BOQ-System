@@ -9,9 +9,9 @@
 
 | Stage | Goal | Status |
 |-------|------|--------|
-| 0 | Requirements & Architecture | ✅ Done |
-| 1 | Project Foundation & Database | 🚧 In progress |
-| 2 | Project & Drawing Management | ⏳ Next |
+| 0 | Requirements & Architecture | 🚧 Audit in progress |
+| 1 | Project Foundation & Database | ⏳ Blocked by Phase 1 exit gate |
+| 2 | Project & Drawing Management | ⏳ Planned |
 | 3 | Drawing Interpretation & Measurement | ⏳ |
 | 4 | Deterministic Quantity Engine | ⏳ |
 | 5 | Independent Verification | ⏳ |
@@ -25,6 +25,8 @@
 | 13 | User Acceptance Testing | ⏳ |
 
 ## 2. Stage Detail
+
+The stage numbering below is a work breakdown, not a claim that earlier stages are complete. The consolidated delivery gates are defined in [FOUR-PHASE-EXECUTION-PLAN.md](FOUR-PHASE-EXECUTION-PLAN.md). The repository currently has no application source or executable test suite.
 
 | Stage | Goal | Key Tasks | Output | Test |
 |-------|------|-----------|--------|------|

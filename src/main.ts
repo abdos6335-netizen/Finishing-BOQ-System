@@ -109,7 +109,7 @@ function renderRoomEditor(room:RoomInput):string{
 function stat(label:string,value:number,unit:string,index:string):string{return `<article class="stat-card"><span class="stat-index">${index}</span><span class="stat-label">${label}</span><strong>${value.toFixed(2)} <small>${unit}</small></strong></article>`;}
 function createProject(event:SubmitEvent):void{
   event.preventDefault();const data=new FormData(event.currentTarget as HTMLFormElement);const name=String(data.get("name")??"").trim();if(!name)return;
-  const project:ProjectRecord={id:createId(),name,projectType:(String(data.get("type")??"apartment")==="villa"?"villa":"apartment"),buildingCondition:String(data.get("buildingCondition")??"unspecified") as BuildingCondition,createdAt:new Date().toISOString(),rooms:[]};
+  const project:ProjectRecord={id:createId(),name,projectType:(String(data.get("type")??"apartment")==="villa"?"villa":"apartment"),buildingCondition:String(data.get("buildingCondition")??"unspecified") as BuildingCondition,createdAt:new Date().toISOString(),rooms:[],boqItems:[]};
   projects=[...projects,project];activeProjectId=project.id;persist();
 }
 function addRoom(event:SubmitEvent):void{

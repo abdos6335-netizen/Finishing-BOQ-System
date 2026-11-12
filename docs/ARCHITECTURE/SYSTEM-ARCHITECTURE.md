@@ -2,17 +2,17 @@
 
 ## 1. Purpose & Scope
 
-This document defines the end-to-end system architecture: layers, boundaries, technology choices, how calculation logic is shared, and how data exists and flows. It is the architectural reference for the Engineering, Drawing, BOQ, and Reporting modules.
+This document defines the proposed system boundaries. Technology selections remain provisional and are governed by [ARCHITECTURE-DECISION-REGISTER.md](ARCHITECTURE-DECISION-REGISTER.md). This is a design document, not evidence that these components have been implemented.
 
 ## 2. Architecture Styles
 
-We select **layered vertical separation** (representation → application → engineering core → data/sync) so that:
+The **recommended logical separation** is layered (presentation → application → engineering core → data/sync) so that:
 
 - The deterministic quantity engine is **isolated** and testable without UI.
 - Drawing processing (CAD/DXF, PDF, OCR) is also isolated and swappable.
 - The presentation tier (Desktop + Web) shares a large part of the code path.
 
-Selected structure:
+Recommended logical structure (technology-neutral):
 ```
 Presentation Layer  (Web + Desktop)
   ↓
@@ -31,23 +31,23 @@ Data & Sync (SQLite local + PostgreSQL cloud)
 
 ## 4. Technology & Platform Comparison
 
-| Area | Choice | Rationale | Alternatives (Rejected or Deferred) | Constraints |
+| Area | Status | Candidate / constraint | Open evaluation |
 |------|--------|-----------|-------------------------------------|-------------|
-| Desktop | **Tauri 2 + React + TS** | Lightweight, fast, WinterCG ecosystem, rich UI | Electron (heavier), native C# (Windows only) | macOS/Linux not in initial scope |
-| Backend | **Python + FastAPI** | Deterministic engine, clear orchestration, DB mapping | Node.js (duplicated logic, divergent rules) | — |
-| Web UI | **React + TypeScript** | Single codebase with desktop | — | — |
-| Data (local) | **SQLite (via SQLCipher for encryption optional)** | Offline-first, zero network needed, trusted | PostgreSQL-only (no offline) | — |
-| Data (cloud) | **PostgreSQL** | Strong relational model, sync-ready | — | — |
-| Drawing | **ezdxf (DXF), PyMuPDF / pdfplumber (PDF), OpenCV/PIL (images)** | DXF is priority; PDF/PNG extended into v1/v2 | First-party DWG SDK (cost, license), OpenCascade (overhead) | DWG support is not guaranteed |
-| OCR | **PaddleOCR / Tesseract** | Read text/notes | Azure Computer Vision (external, cost, upload privacy) | — |
-| Version | **SQLite WAL + backup tasks** | Local point-in-time recovery | — | — |
-| Tests | **Pytest + Playwright** | Python weight, backend coverage, UI integration | — | — |
+| Desktop | TBD | Tauri, Electron, and native Windows are candidates | Python engine packaging, installer/update/signing, Windows compatibility, support burden |
+| Engineering core | Recommended: Python candidate | Python ecosystem is suitable for geometry and calculation prototypes | Runtime packaging, performance, licensing, and deployment must be tested |
+| Web UI | TBD | Shared typed web UI is a candidate | RTL/accessibility, offline storage, deployment, maintainability |
+| Local data | Recommended: SQLite candidate for desktop | Local relational store may support offline workflows | Encryption, migration, concurrency, backup/restore, file lifecycle |
+| Cloud data | TBD; PostgreSQL candidate | Relational server storage is plausible | Hosting, tenant isolation, sync protocol, backups, operational cost |
+| Drawing formats | Recommended: evaluate DXF and PDF first | Keep format adapters replaceable | Representative fixture support, accuracy, licensing; DWG not promised |
+| OCR / AI | TBD | Local and cloud providers may be evaluated | Accuracy, privacy, consent, cost, offline fallback, model licensing |
+| Sync and backup | TBD | Durable change log, idempotency, checkpoints, conflict records, consistent backups are requirements | Detailed two-client conflict and restore tests |
+| Tests | TBD | Automated unit, integration, calculation, UI, recovery tests are required | Select tools after stack decision |
 
 ## 5. Shared Calculation Logic Between Platforms
 
 The key requirement is that **web and desktop share one logic for the calculations**.
 
-**Recommended approach: shared Python core for "orders of calculation" and execute through a single API.**
+**Recommended principle:** one shared engineering calculation contract must serve both clients. Python is a candidate for the core, but API/process topology is not frozen until packaging and deployment spikes pass.
 - Backend exposes a JSON-RPC/HTTP endpoint `POST /v1/engine/quantity`.
 - Both Desktop (Tauri) and Web call it.
 - The UI receives JSON and renders local-side; no business logic is duplicated in JS.
@@ -74,11 +74,11 @@ Full model and relationships are in `docs/ARCHITECTURE/DATABASE-DESIGN.md`.
 
 ## 7. Interfaces
 
-- **Desktop:** Tauri bridges → Python FastAPI backend.
+- **Desktop:** a desktop shell must invoke the shared engineering core through a supported local interface; shell and interface remain TBD.
   - `dev` mode: local API UI for generation.
   - `prod` mode: self-hosted API or connected to cloud API.
-- **Web:** React → Fetch API to FastAPI.
-- **API:** REST/JSON (with JSON-RPC style for computation later).
+- **Web:** the browser client must call the same versioned calculation contract through an authenticated application service.
+- **API:** versioned JSON contract is recommended; REST versus RPC details remain TBD.
 
 ## 8. Deployment
 

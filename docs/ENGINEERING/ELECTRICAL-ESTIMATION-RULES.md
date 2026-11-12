@@ -1,43 +1,46 @@
 # Electrical Estimation Rules
 
-**Version:** 1.0 Draft  
+**Version:** 1.1 Draft — electrical design review required  
 **Last reviewed:** 12 November 2026
 
----
+## 1. Purpose and boundary
 
-## 1. Purpose
+This document defines quantity-surveying inputs for electrical works. It is not an electrical design code and does not authorize the application to design circuits or select protective devices.
 
-Estimate electrical quantities. Rules require data from the drawing; where data is missing, results are marked as "Tentative" pending review.
+## 2. Required evidence
 
-## 2. Inputs
+Depending on the item, inputs may include:
+- Approved lighting and power layouts and schedules.
+- Point/device type and count.
+- Circuit designation and panel/schedule reference.
+- Connected load, demand/diversity assumptions, voltage, phase, and power factor where applicable.
+- Cable/conductor type, size, number of cores, installation method, and route.
+- Conduit/trunking/tray type, size, route, fittings, and accessories.
+- Panel, isolator, control, and equipment schedules.
+- Applicable jurisdictional code, project specification, and engineer-approved design.
 
-- Points (lights, sockets)
-- Circuits (number, length per circuit)
-- Cable length
-- Equipment (ladder, panel, control)
-- Lighting / power design (boxes, etc.)
+## 3. Quantity rules
 
-## 3. Rules
-
-### 3.1 Points
-- Formula: `points = Σ(points for room)`
-- Unit: point
+### 3.1 Points and devices
+Count symbols/devices from an approved drawing or verified schedule. Keep device type, drawing reference, sheet, location, and review state. Ambiguous symbols are not auto-classified.
 
 ### 3.2 Circuits
-- Formula: `circuits = ceiling(room area / per circuit)`.
-- Notes: ceiling rules based on standard or drawing.
+Do not infer circuit count from room area alone. Circuit design depends on connected loads, use, protective design, cable capacity, voltage drop, installation conditions, applicable code, and the approved electrical design. For quantity takeoff, count circuits from the approved circuit schedule or reviewed design. If unavailable, mark the circuit quantity Needs Review.
 
-### 3.3 Cable
-- Formula: `cable = Σ(circuit length)`
-- Add a wrap-up factor to the total.
+### 3.3 Cable and containment
+Measure cable and containment from the documented route and installation design, including vertical rises, drops, panel terminations, and explicitly specified allowances. Do not apply a generic wrap-up factor without a documented project rule. Distinguish conductor length from route length and account for cores/parallel runs explicitly.
 
-### 3.4 Equipment
-- Points and equipment per drawing.
+### 3.4 Accessories and equipment
+Count accessories, panels, isolators, control devices, and equipment from schedules and coordinated drawings. Record type and specification; do not infer unshown ratings.
 
-## 4. Non-Goals (v1)
+## 4. Validation
 
-- Electrical excavations (conduits, etc.) are not estimated from drawings without data.
+- Reconcile point counts against schedules.
+- Check circuit references against panel schedules.
+- Flag missing routes, cable specifications, and uncoordinated drawings.
+- Record drawing revision and source evidence.
+- Require review by a qualified electrical engineer for design-dependent assumptions.
 
----
+## 5. Non-goals
 
-*Last updated: 12 November 2026*
+The quantity engine does not replace electrical load calculation, circuit design, protective-device selection, cable sizing, or code compliance review. No area-only circuit formula is permitted.

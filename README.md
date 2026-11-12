@@ -168,3 +168,6 @@ docs/
 
 - المستودع: https://github.com/abdos6335-netizen/Finishing-BOQ-System
 - الوثائق التقنية: `docs/` (كل ملف في هذا المستودع)
+- المستودع: https://github.com/abdos6335-netizen/Finishing-BOQ-System
+- الوثائق التقنية: `docs/` (كل ملف في هذا المستودع)
+

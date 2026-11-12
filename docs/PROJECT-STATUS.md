@@ -2,7 +2,9 @@
 
 ## Project Status
 
-**Current Status:** Requirements and Architecture Preparation**Current Version:** 0.1.0-preparation**Default Branch:** main
+**Current Status:** Requirements and Architecture Preparation
+**Current Version:** 0.1.0-preparation
+**Default Branch:** main
 
 ## Project Objective
 

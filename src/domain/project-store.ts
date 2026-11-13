@@ -2,6 +2,8 @@ import type { RoomInput } from "./quantity-engine";
 import type { BoqItemInput } from "./boq-engine";
 import type { CostAdjustment } from "./cost-engine";
 import type { VariationOrder } from "./variation-orders";
+import type { AssemblyDefinition } from "./finishing-assemblies";
+import type { MepTakeoffInput } from "./mep-takeoff";
 
 export type BuildingCondition =
   | "red-brick"
@@ -27,6 +29,8 @@ export interface ProjectRecord {
   currency?: string;
   adjustments?: CostAdjustment[];
   variations?: VariationOrder[];
+  assemblies?: AssemblyDefinition[];
+  mep?: MepTakeoffInput;
 }
 
 const STORAGE_KEY = "finishing-boq.projects.v1";
@@ -75,6 +79,31 @@ function isVariation(value: unknown): value is VariationOrder {
     value.items.every(entry => isRecord(entry) && (entry.direction === "addition" || entry.direction === "omission") && isBoqItem(entry.item));
 }
 
+function isAssembly(value: unknown): value is AssemblyDefinition {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string" && typeof value.name === "string" &&
+    typeof value.version === "number" && Number.isInteger(value.version) &&
+    Array.isArray(value.components) &&
+    value.components.every(c => isRecord(c) && typeof c.id === "string" && typeof c.code === "string" &&
+      typeof c.description === "string" && ["m", "m2", "m3", "pcs"].includes(String(c.unit)) &&
+      ["floor-area", "ceiling-area", "wall-net-area", "wall-gross-area", "perimeter"].includes(String(c.basis)) &&
+      typeof c.quantityPerBasisUnit === "number" && typeof c.ruleRef === "string");
+}
+
+function isMep(value: unknown): value is MepTakeoffInput {
+  if (!isRecord(value)) return false;
+  const disciplines = ["electrical", "low-current", "plumbing", "hvac"];
+  return Array.isArray(value.points) && Array.isArray(value.circuits) && Array.isArray(value.cableRuns) &&
+    value.points.every(p => isRecord(p) && typeof p.id === "string" && disciplines.includes(String(p.discipline)) &&
+      typeof p.deviceType === "string" && typeof p.count === "number" && typeof p.drawingRef === "string" && typeof p.reviewed === "boolean") &&
+    value.circuits.every(c => isRecord(c) && typeof c.id === "string" && typeof c.panelRef === "string" && typeof c.circuitRef === "string" &&
+      typeof c.scheduleRef === "string" && Array.isArray(c.pointIds) && c.pointIds.every(id => typeof id === "string")) &&
+    value.cableRuns.every(r => isRecord(r) && typeof r.id === "string" && disciplines.includes(String(r.discipline)) && typeof r.spec === "string" &&
+      typeof r.cores === "number" && typeof r.parallelRuns === "number" && typeof r.routeRef === "string" &&
+      Array.isArray(r.segments) && r.segments.every(g => isRecord(g) && typeof g.id === "string" && typeof g.lengthM === "number") &&
+      Array.isArray(r.allowances) && r.allowances.every(a => isRecord(a) && typeof a.description === "string" && typeof a.lengthM === "number" && typeof a.approvalRef === "string"));
+}
+
 function isRoom(value: unknown): value is RoomInput {
   if (!isRecord(value)) return false;
   return typeof value.id === "string" &&
@@ -106,7 +135,9 @@ export function loadProjects(): ProjectRecord[] {
           (item.boqItems !== undefined && (!Array.isArray(item.boqItems) || !item.boqItems.every(isBoqItem))) ||
           (item.currency !== undefined && typeof item.currency !== "string") ||
           (item.adjustments !== undefined && (!Array.isArray(item.adjustments) || !item.adjustments.every(isAdjustment))) ||
-          (item.variations !== undefined && (!Array.isArray(item.variations) || !item.variations.every(isVariation)))) return [];
+          (item.variations !== undefined && (!Array.isArray(item.variations) || !item.variations.every(isVariation))) ||
+          (item.assemblies !== undefined && (!Array.isArray(item.assemblies) || !item.assemblies.every(isAssembly))) ||
+          (item.mep !== undefined && !isMep(item.mep))) return [];
 
       const projectType: ProjectType =
         item.projectType === "villa" ? "villa" : "apartment";
@@ -124,7 +155,9 @@ export function loadProjects(): ProjectRecord[] {
         boqItems: Array.isArray(item.boqItems) ? item.boqItems : [],
         ...(typeof item.currency === "string" ? { currency: item.currency } : {}),
         ...(Array.isArray(item.adjustments) ? { adjustments: item.adjustments as CostAdjustment[] } : {}),
-        ...(Array.isArray(item.variations) ? { variations: item.variations as VariationOrder[] } : {})
+        ...(Array.isArray(item.variations) ? { variations: item.variations as VariationOrder[] } : {}),
+        ...(Array.isArray(item.assemblies) ? { assemblies: item.assemblies as AssemblyDefinition[] } : {}),
+        ...(isMep(item.mep) ? { mep: item.mep } : {})
       }];
     });
   } catch {

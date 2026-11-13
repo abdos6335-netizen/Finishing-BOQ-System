@@ -16,3 +16,6 @@
 .actions{display:flex;flex-wrap:wrap;gap:8px}
 
 .currency-label{max-width:220px;margin-bottom:12px}.vo-actions{margin-top:12px}.boq-form .check-label{align-self:end}
+
+.point-choices{border:1px solid var(--line,#d8d8d8);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;grid-column:1/-1}
+#mep-panel h3{margin:18px 0 8px}

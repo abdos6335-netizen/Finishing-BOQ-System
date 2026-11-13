@@ -6,6 +6,7 @@ import { IndexedDbProjectStorage, migrateFromLocalStorage, type ProjectStorage }
 import { buildReportModel, buildXlsx, renderReportHtml } from "./domain/report-export";
 import { addVariationItem, adjustmentsOf, buildAdjustment, buildVariationItem, canDeleteVariation, createVariation, nextVariationNumber, projectFinancials, removeVariationItem, variationsOf } from "./domain/project-costing";
 import { calculateVariation, transitionVariation, type VariationOrder, type VariationStatus } from "./domain/variation-orders";
+import { addAssemblyComponent, addMepCableRun, addMepCircuit, addMepPoint, applyAssemblyToProject, assembliesOf, createAssembly, mepOf, mepSummary, removeAssemblyComponent, removeMepCableRun, removeMepCircuit, removeMepPoint, syncMepToBoq, toggleMepPointReviewed } from "./domain/project-takeoff";
 import "./style.css";
 
 let projects: ProjectRecord[] = [];
@@ -20,6 +21,8 @@ const copy = {
     gross:"إجمالي الحوائط",deductions:"خصم الفتحات",perimeter:"المحيط",rooms:"الغرف",empty:"ابدأ بإنشاء مشروع ثم أضف الغرف لعرض الحصر.",
     noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",exportXlsx:"تصدير Excel",printReport:"تقرير PDF / طباعة",currencyPrompt:"أدخل عملة التقرير (مثال: EGP):",storageError:"تعذّر حفظ البيانات في قاعدة البيانات المحلية.",costing:"التكلفة والإضافات",currency:"عملة المشروع",currencyPlaceholder:"مثال: EGP",adjLabel:"اسم الإضافة",adjKind:"النوع",kTransport:"نقل",kEngineerFee:"أتعاب هندسية",kOverhead:"مصروفات عامة",kContingency:"احتياطي",kProfit:"ربح",kTax:"ضريبة",kOther:"أخرى",adjRate:"نسبة %",adjFixed:"مبلغ ثابت",adjBase:"أساس النسبة",baseDirect:"التكلفة المباشرة",baseCumulative:"التراكمي (شامل ما قبلها)",adjOrder:"الترتيب",adjApproval:"مرجع الاعتماد",adjVisible:"ظاهرة للعميل",addAdjustment:"إضافة",directSubtotal:"التكلفة المباشرة",adjustmentsTotal:"إجمالي الإضافات",grandTotal:"الإجمالي النهائي",costIncomplete:"الإجمالي غير مكتمل: توجد بنود غير مسعّرة أو تحتاج مراجعة.",costComplete:"كل البنود مسعّرة ومراجَعة.",adjHint:"كل إضافة تحتاج مرجع اعتماد. لا توجد نسب افتراضية: أدخل نسبة مع أساس صريح، أو مبلغًا ثابتًا، وليس الاثنين.",hiddenLabel:"مخفية عن العميل",noAdjustments:"لا توجد إضافات بعد.",currencyMissing:"لم تُدخل عملة بعد.",
 variations:"الأعمال الإضافية (أوامر التغيير)",newVariation:"أمر تغيير جديد",voNumber:"الرقم",voTitle:"العنوان",voReason:"السبب",voBaseRevision:"إصدار المقايسة الأساسي",createVariation:"إنشاء الأمر",stDraft:"مسودة",stSubmitted:"مقدَّم",stApproved:"معتمد",stRejected:"مرفوض",voAddition:"إضافة",voOmission:"حذف من المقايسة",voDirection:"النوع",voSubmit:"تقديم",voApprove:"اعتماد",voReject:"رفض",voReopen:"إعادة لمسودة",voDelete:"حذف الأمر",voApprovalPrompt:"أدخل مرجع اعتماد الأمر:",voTotal:"صافي الأمر",voBaseTotal:"الإجمالي الأساسي",voApprovedTotal:"الأعمال المعتمدة",voRevisedTotal:"الإجمالي المعدّل",voPendingTotal:"قيد الاعتماد",voLocked:"لا يمكن تعديل البنود إلا في المسودة.",noVariations:"لا توجد أوامر تغيير.",voIncomplete:"أوامر بها بنود غير مسعّرة",voNoItems:"لا توجد بنود.",addVoItem:"إضافة بند",
+assemblies:"التجميعات (أنظمة التشطيب)",asmName:"اسم التجميع",asmCreate:"إنشاء تجميع",asmDelete:"حذف التجميع",asmApply:"تطبيق على كل الغرف",asmCode:"كود المكوّن",asmDescription:"الوصف",asmBasis:"أساس الحساب",bFloor:"مساحة الأرضية",bCeiling:"مساحة السقف",bWallNet:"صافي الحوائط",bWallGross:"إجمالي الحوائط",bPerimeter:"المحيط",asmRatio:"الكمية لكل وحدة أساس",asmRule:"مرجع القاعدة",asmAddComponent:"إضافة مكوّن",asmNone:"لا توجد تجميعات.",asmNoComponents:"لا توجد مكوّنات.",asmHint:"لا توجد نسب استهلاك افتراضية: كل مكوّن يحتاج نسبة ومرجع قاعدة. أي تعديل في التعريف يرفع رقم الإصدار.",asmApplied:"تمت الإضافة: {a} · تحديث: {u} · موجود: {p}",asmSkipped:"تم تخطي {n} (هندسة الحوائط ناقصة أو تحتاج مراجعة).",
+mep:"أعمال الـ MEP (من مخططات معتمدة فقط)",mepHint:"لا تُحسب نقاط ولا دوائر من مساحة الغرفة. النقاط تحتاج مرجع مخطط، والدوائر تأتي من جدول دوائر، والكابلات من أطوال مسارات موثقة.",mepDiscipline:"التخصص",dElectrical:"كهرباء",dLowCurrent:"تيار خفيف",dPlumbing:"سباكة",dHvac:"تكييف",mepDevice:"نوع الجهاز",mepCount:"العدد",mepRoom:"الغرفة",mepNoRoom:"بدون",mepDrawing:"مرجع المخطط",mepSheet:"اللوحة",mepRevision:"الإصدار",mepReviewed:"تمت المراجعة",mepAddPoint:"إضافة نقطة",mepPoints:"النقاط",mepCircuits:"جدول الدوائر",mepPanel:"اللوحة الكهربائية",mepCircuit:"رقم الدائرة",mepSchedule:"مرجع الجدول",mepCircuitPoints:"النقاط على الدائرة",mepAddCircuit:"إضافة دائرة",mepCables:"الكابلات",mepSpec:"مواصفة الكابل",mepCores:"عدد الأسلاك",mepParallel:"مسارات متوازية",mepRoute:"مرجع المسار",mepSegments:"أطوال المقاطع (م) مفصولة بفواصل",mepAllowance:"سماحية (م)",mepAllowanceDesc:"وصف السماحية",mepAllowanceRef:"مرجع اعتماد السماحية",mepAddCable:"إضافة كابل",mepSync:"إرسال المعتمد إلى المقايسة",mepSynced:"أضيف {a} · تحدّث {u}",mepStale:"{n} بند MEP لم يعد معتمدًا ومازال في المقايسة: راجعه.",mepCircuitCount:"عدد الدوائر",mepFromSchedule:"من الجدول",mepNeedsReview:"يحتاج مراجعة",mepConductor:"طول الموصلات (م)",mepStatusOk:"مؤكد",mepNoPoints:"لا توجد نقاط.",mepNoCircuits:"لا توجد دوائر.",mepNoCables:"لا توجد كابلات.",mepUnscheduled:"نقاط كهرباء بدون دائرة",
 language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
@@ -32,6 +35,8 @@ language:"English",
     gross:"Gross walls",deductions:"Opening deductions",perimeter:"Perimeter",rooms:"Rooms",empty:"Create a project, then add rooms to see the takeoff.",
     noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",exportXlsx:"Export Excel",printReport:"PDF report / print",currencyPrompt:"Enter the report currency (e.g. EGP):",storageError:"Could not save to the local database.",costing:"Cost & adjustments",currency:"Project currency",currencyPlaceholder:"e.g. EGP",adjLabel:"Adjustment name",adjKind:"Kind",kTransport:"Transport",kEngineerFee:"Engineering fee",kOverhead:"Overhead",kContingency:"Contingency",kProfit:"Profit",kTax:"Tax",kOther:"Other",adjRate:"Rate %",adjFixed:"Fixed amount",adjBase:"Rate base",baseDirect:"Direct cost",baseCumulative:"Cumulative (incl. earlier adjustments)",adjOrder:"Order",adjApproval:"Approval reference",adjVisible:"Visible to client",addAdjustment:"Add",directSubtotal:"Direct cost",adjustmentsTotal:"Adjustments total",grandTotal:"Grand total",costIncomplete:"The total is incomplete: some items are unpriced or need review.",costComplete:"All items are priced and verified.",adjHint:"Every adjustment needs an approval reference. There are no default rates: enter a rate with an explicit base, or a fixed amount, not both.",hiddenLabel:"Hidden from client",noAdjustments:"No adjustments yet.",currencyMissing:"No currency entered yet.",
 variations:"Variation orders",newVariation:"New variation order",voNumber:"Number",voTitle:"Title",voReason:"Reason",voBaseRevision:"Base BOQ revision",createVariation:"Create order",stDraft:"Draft",stSubmitted:"Submitted",stApproved:"Approved",stRejected:"Rejected",voAddition:"Addition",voOmission:"Omission from BOQ",voDirection:"Type",voSubmit:"Submit",voApprove:"Approve",voReject:"Reject",voReopen:"Back to draft",voDelete:"Delete order",voApprovalPrompt:"Enter the approval reference for this order:",voTotal:"Order net",voBaseTotal:"Base total",voApprovedTotal:"Approved variations",voRevisedTotal:"Revised total",voPendingTotal:"Pending approval",voLocked:"Items can only be edited while the order is a draft.",noVariations:"No variation orders yet.",voIncomplete:"Orders with unpriced items",voNoItems:"No items.",addVoItem:"Add item",
+assemblies:"Assemblies (finishing systems)",asmName:"Assembly name",asmCreate:"Create assembly",asmDelete:"Delete assembly",asmApply:"Apply to all rooms",asmCode:"Component code",asmDescription:"Description",asmBasis:"Quantity basis",bFloor:"Floor area",bCeiling:"Ceiling area",bWallNet:"Net wall area",bWallGross:"Gross wall area",bPerimeter:"Perimeter",asmRatio:"Quantity per basis unit",asmRule:"Rule reference",asmAddComponent:"Add component",asmNone:"No assemblies yet.",asmNoComponents:"No components.",asmHint:"There are no default consumption ratios: every component needs a ratio and a rule reference. Any change to the definition bumps its version.",asmApplied:"Added: {a} · updated: {u} · already present: {p}",asmSkipped:"{n} skipped (wall geometry missing or needs review).",
+mep:"MEP works (approved drawings only)",mepHint:"Points and circuits are never derived from room area. Points need a drawing reference, circuits come from a circuit schedule, and cables from documented route lengths.",mepDiscipline:"Discipline",dElectrical:"Electrical",dLowCurrent:"Low current",dPlumbing:"Plumbing",dHvac:"HVAC",mepDevice:"Device type",mepCount:"Count",mepRoom:"Room",mepNoRoom:"None",mepDrawing:"Drawing reference",mepSheet:"Sheet",mepRevision:"Revision",mepReviewed:"Reviewed",mepAddPoint:"Add point",mepPoints:"Points",mepCircuits:"Circuit schedule",mepPanel:"Panel",mepCircuit:"Circuit",mepSchedule:"Schedule reference",mepCircuitPoints:"Points on circuit",mepAddCircuit:"Add circuit",mepCables:"Cables",mepSpec:"Cable specification",mepCores:"Cores",mepParallel:"Parallel runs",mepRoute:"Route reference",mepSegments:"Segment lengths (m), comma separated",mepAllowance:"Allowance (m)",mepAllowanceDesc:"Allowance description",mepAllowanceRef:"Allowance approval reference",mepAddCable:"Add cable",mepSync:"Send verified items to BOQ",mepSynced:"Added {a} · updated {u}",mepStale:"{n} MEP BOQ line(s) are no longer verified but remain in the BOQ: review them.",mepCircuitCount:"Circuits",mepFromSchedule:"From schedule",mepNeedsReview:"Needs review",mepConductor:"Conductor length (m)",mepStatusOk:"Verified",mepNoPoints:"No points.",mepNoCircuits:"No circuits.",mepNoCables:"No cables.",mepUnscheduled:"Electrical points without a circuit",
 language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
@@ -96,6 +101,12 @@ function render():void{
   document.querySelector<HTMLButtonElement>("#export-xlsx")?.addEventListener("click",exportXlsx);
   document.querySelector<HTMLButtonElement>("#print-report")?.addEventListener("click",printReport);
   document.querySelector<HTMLInputElement>("#project-currency")?.addEventListener("change",saveCurrency);
+  const asmPanel=document.querySelector<HTMLElement>("#assembly-panel");
+  asmPanel?.addEventListener("submit",assemblySubmitHandler);
+  asmPanel?.addEventListener("click",assemblyClickHandler);
+  const mepPanel=document.querySelector<HTMLElement>("#mep-panel");
+  mepPanel?.addEventListener("submit",mepSubmitHandler);
+  mepPanel?.addEventListener("click",mepClickHandler);
   const costPanel=document.querySelector<HTMLElement>("#cost-panel");
   costPanel?.addEventListener("submit",addAdjustmentHandler);
   costPanel?.addEventListener("click",removeAdjustmentHandler);
@@ -127,7 +138,7 @@ function renderProject(project:ProjectRecord):string{
     </section>
     <section class="panel room-editor-panel"><div class="panel-head"><div><span class="eyebrow">MEASURED GEOMETRY</span><h2>${t("measuredFaces")} &amp; ${t("openings")}</h2></div></div>
       <div id="room-editor-list">${project.rooms.map(renderRoomEditor).join("")||`<p class="muted">${t("noRooms")}</p>`}</div>
-    </section>${renderBoq(project)}${renderCosting(project)}${renderVariations(project)}`;
+    </section>${renderBoq(project)}${renderAssemblies(project)}${renderMep(project)}${renderCosting(project)}${renderVariations(project)}`;
 }
 function renderBoq(project:ProjectRecord):string{
   const summary=calculateBoq(project.boqItems);
@@ -227,6 +238,156 @@ const STATUS_LABELS:Record<VariationStatus,keyof typeof copy.ar>={draft:"stDraft
 function field(data:FormData,name:string):string{return String(data.get(name)??"");}
 function showError(error:unknown):void{window.alert(error instanceof Error?error.message:t("createError"));}
 function money(value:number|null):string{return value===null?"—":value.toFixed(2);}
+
+const BASIS_LABELS:Record<string,keyof typeof copy.ar>={"floor-area":"bFloor","ceiling-area":"bCeiling","wall-net-area":"bWallNet","wall-gross-area":"bWallGross",perimeter:"bPerimeter"};
+const DISCIPLINE_LABELS:Record<string,keyof typeof copy.ar>={electrical:"dElectrical","low-current":"dLowCurrent",plumbing:"dPlumbing",hvac:"dHvac"};
+function fill(text:string,values:Record<string,number>):string{return text.replace(/\{(\w+)\}/g,(_m,key:string)=>String(values[key]??""));}
+function disciplineOptions():string{return Object.keys(DISCIPLINE_LABELS).map(key=>`<option value="${key}">${t(DISCIPLINE_LABELS[key])}</option>`).join("");}
+
+function renderAssemblies(project:ProjectRecord):string{
+  const unitOptions=`<option value="m2">m²</option><option value="m">m</option><option value="m3">m³</option><option value="pcs">pcs</option>`;
+  const basisOptions=Object.keys(BASIS_LABELS).map(key=>`<option value="${key}">${t(BASIS_LABELS[key])}</option>`).join("");
+  const cards=assembliesOf(project).map(def=>{
+    const rows=def.components.map(c=>`<tr><td>${escapeHtml(c.code)}</td><td>${escapeHtml(c.description)}<small>${escapeHtml(c.ruleRef)}</small></td><td>${t(BASIS_LABELS[c.basis])}</td><td>${c.quantityPerBasisUnit} ${c.unit}</td><td><button class="text-button danger" data-asm-remove-component="${escapeHtml(c.id)}" data-asm-id="${escapeHtml(def.id)}">${t("remove")}</button></td></tr>`).join("");
+    return `<article class="room-editor"><div class="room-editor-head"><div><strong>${escapeHtml(def.name)}</strong><small>v${def.version}</small></div><div class="actions"><button class="outline" data-asm-apply="${escapeHtml(def.id)}" ${def.components.length===0?"disabled":""}>${t("asmApply")}</button><button class="text-button danger" data-asm-delete="${escapeHtml(def.id)}">${t("asmDelete")}</button></div></div>
+      <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("asmCode")}</th><th>${t("asmDescription")}</th><th>${t("asmBasis")}</th><th>${t("asmRatio")}</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="muted">${t("asmNoComponents")}</td></tr>`}</tbody></table></div>
+      <form class="boq-form asm-component-form" data-asm-id="${escapeHtml(def.id)}">
+        <label>${t("asmCode")}<input name="code" required maxlength="30"/></label>
+        <label>${t("asmDescription")}<input name="description" required maxlength="160"/></label>
+        <label>${t("boqUnit")}<select name="unit">${unitOptions}</select></label>
+        <label>${t("asmBasis")}<select name="basis">${basisOptions}</select></label>
+        <label>${t("asmRatio")}<input name="quantityPerBasisUnit" type="number" min="0" step="0.0001" required/></label>
+        <label>${t("asmRule")}<input name="ruleRef" required maxlength="160"/></label>
+        <button class="primary" type="submit">${t("asmAddComponent")}</button></form></article>`;
+  }).join("")||`<p class="muted">${t("asmNone")}</p>`;
+  return `<section class="panel boq-panel" id="assembly-panel"><div class="panel-head"><div><span class="eyebrow">ASSEMBLIES</span><h2>${t("assemblies")}</h2></div></div>
+    <form id="assembly-form" class="boq-form"><label>${t("asmName")}<input name="name" required maxlength="80"/></label><button class="primary" type="submit">${t("asmCreate")}</button></form>
+    <p class="hint">${t("asmHint")}</p><p id="assembly-message" class="hint"></p>${cards}</section>`;
+}
+
+function assemblySubmitHandler(event:SubmitEvent):void{
+  const form=event.target;if(!(form instanceof HTMLFormElement))return;
+  const project=activeProject();if(!project)return;const data=new FormData(form);
+  try{
+    if(form.id==="assembly-form"){
+      event.preventDefault();
+      project.assemblies=[...assembliesOf(project),createAssembly(assembliesOf(project),field(data,"name"),createId())];persist();return;
+    }
+    if(form.classList.contains("asm-component-form")){
+      event.preventDefault();
+      const def=assembliesOf(project).find(item=>item.id===form.dataset.asmId);if(!def)return;
+      const updated=addAssemblyComponent(def,{code:field(data,"code"),description:field(data,"description"),unit:field(data,"unit"),basis:field(data,"basis"),quantityPerBasisUnit:field(data,"quantityPerBasisUnit"),ruleRef:field(data,"ruleRef")},createId());
+      project.assemblies=assembliesOf(project).map(item=>item.id===def.id?updated:item);persist();
+    }
+  }catch(error){showError(error);}
+}
+function assemblyClickHandler(event:MouseEvent):void{
+  const target=event.target;if(!(target instanceof HTMLElement))return;
+  const button=target.closest<HTMLButtonElement>("[data-asm-apply],[data-asm-delete],[data-asm-remove-component]");if(!button)return;
+  const project=activeProject();if(!project)return;
+  try{
+    if(button.dataset.asmDelete){project.assemblies=assembliesOf(project).filter(item=>item.id!==button.dataset.asmDelete);persist();return;}
+    if(button.dataset.asmRemoveComponent){
+      const def=assembliesOf(project).find(item=>item.id===button.dataset.asmId);if(!def)return;
+      project.assemblies=assembliesOf(project).map(item=>item.id===def.id?removeAssemblyComponent(def,button.dataset.asmRemoveComponent as string):item);persist();return;
+    }
+    if(button.dataset.asmApply){
+      const {items,result}=applyAssemblyToProject(project,button.dataset.asmApply,createId);
+      project.boqItems=items;persist();
+      const lines=[fill(t("asmApplied"),{a:result.addedItems.length,u:result.updatedItems.length,p:result.alreadyPresentCount})];
+      if(result.skipped.length)lines.push(fill(t("asmSkipped"),{n:result.skipped.length}));
+      lines.push(...result.overlapWarnings);
+      window.alert(lines.join("\n"));
+    }
+  }catch(error){showError(error);}
+}
+
+function renderMep(project:ProjectRecord):string{
+  const mep=mepOf(project);
+  let summary;try{summary=mepSummary(project);}catch(error){return `<section class="panel boq-panel"><p class="warn">${escapeHtml(error instanceof Error?error.message:t("createError"))}</p></section>`;}
+  const roomOptions=`<option value="">${t("mepNoRoom")}</option>`+project.rooms.map(r=>`<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)}</option>`).join("");
+  const roomName=(id?:string)=>project.rooms.find(r=>r.id===id)?.name??"—";
+  const pointRows=mep.points.map(pt=>`<tr><td>${t(DISCIPLINE_LABELS[pt.discipline])}</td><td>${escapeHtml(pt.deviceType)}<small>${escapeHtml(pt.drawingRef)}${pt.sheet?` · ${escapeHtml(pt.sheet)}`:""}${pt.revision?` · ${escapeHtml(pt.revision)}`:""}</small></td><td>${pt.count}</td><td>${escapeHtml(roomName(pt.roomId))}</td><td><label class="check-label"><input type="checkbox" data-mep-review="${escapeHtml(pt.id)}" ${pt.reviewed?"checked":""}/> ${t("mepReviewed")}</label></td><td><button class="text-button danger" data-mep-remove-point="${escapeHtml(pt.id)}">${t("remove")}</button></td></tr>`).join("");
+  const pointChoices=mep.points.map(pt=>`<label class="check-label"><input type="checkbox" name="pointIds" value="${escapeHtml(pt.id)}"/> ${escapeHtml(pt.deviceType)} ×${pt.count} (${escapeHtml(pt.drawingRef)})</label>`).join("");
+  const circuitRows=mep.circuits.map(c=>`<tr><td>${escapeHtml(c.panelRef)} / ${escapeHtml(c.circuitRef)}<small>${escapeHtml(c.scheduleRef)}</small></td><td>${c.pointIds.length}</td><td><button class="text-button danger" data-mep-remove-circuit="${escapeHtml(c.id)}">${t("remove")}</button></td></tr>`).join("");
+  const cableRows=summary.cableRuns.map(r=>`<tr><td>${escapeHtml(r.spec)}<small>${escapeHtml(r.routeRef)}</small></td><td>${r.routeLengthM} + ${r.allowanceLengthM}</td><td>${r.conductorLengthM}</td><td class="${r.status==="verified"?"good":"warn"}">${r.status==="verified"?t("mepStatusOk"):escapeHtml(r.checks.join(" "))}</td><td><button class="text-button danger" data-mep-remove-cable="${escapeHtml(r.id)}">${t("remove")}</button></td></tr>`).join("");
+  const totals=summary.pointTotals.map(x=>`<tr><td>${t(DISCIPLINE_LABELS[x.discipline])}</td><td>${escapeHtml(x.deviceType)}</td><td>${x.totalCount}</td><td class="${x.status==="verified"?"good":"warn"}">${x.status==="verified"?t("mepStatusOk"):t("mepNeedsReview")}</td></tr>`).join("");
+  return `<section class="panel boq-panel" id="mep-panel"><div class="panel-head"><div><span class="eyebrow">MEP TAKEOFF</span><h2>${t("mep")}</h2></div><button class="outline" data-mep-sync="1">${t("mepSync")}</button></div>
+    <p class="hint">${t("mepHint")}</p>
+    <h3>${t("mepPoints")}</h3>
+    <form id="mep-point-form" class="boq-form">
+      <label>${t("mepDiscipline")}<select name="discipline">${disciplineOptions()}</select></label>
+      <label>${t("mepDevice")}<input name="deviceType" required maxlength="80"/></label>
+      <label>${t("mepCount")}<input name="count" type="number" min="0" step="1" required/></label>
+      <label>${t("mepRoom")}<select name="roomId">${roomOptions}</select></label>
+      <label>${t("mepDrawing")}<input name="drawingRef" required maxlength="160"/></label>
+      <label>${t("mepSheet")}<input name="sheet" maxlength="40"/></label>
+      <label>${t("mepRevision")}<input name="revision" maxlength="40"/></label>
+      <label class="check-label"><input name="reviewed" type="checkbox"/> ${t("mepReviewed")}</label>
+      <button class="primary" type="submit">${t("mepAddPoint")}</button></form>
+    <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("mepDiscipline")}</th><th>${t("mepDevice")}</th><th>${t("mepCount")}</th><th>${t("mepRoom")}</th><th></th><th></th></tr></thead><tbody>${pointRows||`<tr><td colspan="6" class="muted">${t("mepNoPoints")}</td></tr>`}</tbody></table></div>
+    ${totals?`<div class="boq-table-wrap"><table class="boq-table"><tbody>${totals}</tbody></table></div>`:""}
+    <h3>${t("mepCircuits")}</h3>
+    <form id="mep-circuit-form" class="boq-form">
+      <label>${t("mepPanel")}<input name="panelRef" required maxlength="40"/></label>
+      <label>${t("mepCircuit")}<input name="circuitRef" required maxlength="40"/></label>
+      <label>${t("mepSchedule")}<input name="scheduleRef" required maxlength="160"/></label>
+      <fieldset class="point-choices"><legend>${t("mepCircuitPoints")}</legend>${pointChoices||`<span class="muted">${t("mepNoPoints")}</span>`}</fieldset>
+      <button class="primary" type="submit">${t("mepAddCircuit")}</button></form>
+    <p class="hint ${summary.circuitStatus==="from-schedule"?"good":"warn"}">${t("mepCircuitCount")}: ${summary.circuitCount===null?t("mepNeedsReview"):`${summary.circuitCount} (${t("mepFromSchedule")})`}${summary.unscheduledPointIds.length?` · ${t("mepUnscheduled")}: ${summary.unscheduledPointIds.length}`:""}</p>
+    <div class="boq-table-wrap"><table class="boq-table"><tbody>${circuitRows||`<tr><td class="muted">${t("mepNoCircuits")}</td></tr>`}</tbody></table></div>
+    <h3>${t("mepCables")}</h3>
+    <form id="mep-cable-form" class="boq-form">
+      <label>${t("mepDiscipline")}<select name="discipline">${disciplineOptions()}</select></label>
+      <label>${t("mepSpec")}<input name="spec" required maxlength="100"/></label>
+      <label>${t("mepCores")}<input name="cores" type="number" min="1" step="1" required/></label>
+      <label>${t("mepParallel")}<input name="parallelRuns" type="number" min="1" step="1" value="1" required/></label>
+      <label>${t("mepRoute")}<input name="routeRef" required maxlength="160"/></label>
+      <label>${t("mepSegments")}<input name="segments" required/></label>
+      <label>${t("mepAllowance")}<input name="allowanceLength" type="number" min="0" step="0.01"/></label>
+      <label>${t("mepAllowanceDesc")}<input name="allowanceDescription" maxlength="120"/></label>
+      <label>${t("mepAllowanceRef")}<input name="allowanceApprovalRef" maxlength="160"/></label>
+      <button class="primary" type="submit">${t("mepAddCable")}</button></form>
+    <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("mepSpec")}</th><th>m + ${t("mepAllowance")}</th><th>${t("mepConductor")}</th><th></th><th></th></tr></thead><tbody>${cableRows||`<tr><td colspan="5" class="muted">${t("mepNoCables")}</td></tr>`}</tbody></table></div>
+    ${summary.checks.length?`<ul class="validation-list">${summary.checks.map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul>`:""}
+  </section>`;
+}
+
+function mepSubmitHandler(event:SubmitEvent):void{
+  const form=event.target;if(!(form instanceof HTMLFormElement))return;
+  const project=activeProject();if(!project)return;const data=new FormData(form);const mep=mepOf(project);
+  try{
+    if(form.id==="mep-point-form"){
+      event.preventDefault();
+      project.mep=addMepPoint(mep,{discipline:field(data,"discipline"),deviceType:field(data,"deviceType"),count:field(data,"count"),roomId:field(data,"roomId"),drawingRef:field(data,"drawingRef"),sheet:field(data,"sheet"),revision:field(data,"revision"),reviewed:data.get("reviewed")==="on"},createId());persist();return;
+    }
+    if(form.id==="mep-circuit-form"){
+      event.preventDefault();
+      project.mep=addMepCircuit(mep,{panelRef:field(data,"panelRef"),circuitRef:field(data,"circuitRef"),scheduleRef:field(data,"scheduleRef"),pointIds:data.getAll("pointIds").map(String)},createId());persist();return;
+    }
+    if(form.id==="mep-cable-form"){
+      event.preventDefault();
+      project.mep=addMepCableRun(mep,{discipline:field(data,"discipline"),spec:field(data,"spec"),cores:field(data,"cores"),parallelRuns:field(data,"parallelRuns"),routeRef:field(data,"routeRef"),segments:field(data,"segments"),allowanceLength:field(data,"allowanceLength"),allowanceDescription:field(data,"allowanceDescription"),allowanceApprovalRef:field(data,"allowanceApprovalRef")},createId());persist();
+    }
+  }catch(error){showError(error);}
+}
+function mepClickHandler(event:MouseEvent):void{
+  const target=event.target;if(!(target instanceof HTMLElement))return;
+  const project=activeProject();if(!project)return;const mep=mepOf(project);
+  try{
+    if(target instanceof HTMLInputElement&&target.dataset.mepReview){project.mep=toggleMepPointReviewed(mep,target.dataset.mepReview);persist();return;}
+    const button=target.closest<HTMLButtonElement>("[data-mep-remove-point],[data-mep-remove-circuit],[data-mep-remove-cable],[data-mep-sync]");if(!button)return;
+    if(button.dataset.mepRemovePoint){project.mep=removeMepPoint(mep,button.dataset.mepRemovePoint);persist();return;}
+    if(button.dataset.mepRemoveCircuit){project.mep=removeMepCircuit(mep,button.dataset.mepRemoveCircuit);persist();return;}
+    if(button.dataset.mepRemoveCable){project.mep=removeMepCableRun(mep,button.dataset.mepRemoveCable);persist();return;}
+    if(button.dataset.mepSync){
+      const sync=syncMepToBoq(project,createId);project.boqItems=sync.items;persist();
+      const lines=[fill(t("mepSynced"),{a:sync.added,u:sync.updated})];
+      if(sync.staleCount)lines.push(fill(t("mepStale"),{n:sync.staleCount}));
+      window.alert(lines.join("\n"));
+    }
+  }catch(error){showError(error);}
+}
 
 function renderCosting(project:ProjectRecord):string{
   let financials;

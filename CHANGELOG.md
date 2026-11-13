@@ -8,6 +8,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- UI screens for finishing assemblies (explicit ratio and rule reference per component, versioned, idempotent apply to all rooms) and MEP takeoff (points with drawing reference and review flag, circuit schedule, cable runs from documented segments and approved allowances, verified-only sync to the BOQ). Rules live in `src/domain/project-takeoff.ts`.
+- 6 tests for assemblies, MEP and store round-trip (104 total).
 - UI screens for project currency, cost adjustments (approval reference and explicit base required) and variation orders (draft/submitted/approved/rejected, approved is immutable, revised total); exports now use the project's currency, adjustments and variations. Rules live in `src/domain/project-costing.ts`.
 - 7 tests for project costing and store round-trip (98 total).
 - Domain engines: dimension audit, finishing assemblies, productivity, cost roll-up, variation orders, MEP takeoff, critical path, project hierarchy.

@@ -7,7 +7,7 @@
 
 ## Verified implementation state (2026-11-13)
 
-Verified by running `npm test` and `npm run build` locally on this branch: **91 tests in 8 files pass and the production build succeeds.** CI has not been run for this state until it is pushed.
+Latest code adds the schedule and conflict-review screens plus 6 tests. GitHub Actions run #49 exposed 2 incorrect assertions in the new conflict-review fixture (the engine correctly treated a one-sided field change as non-conflicting); the fixture was corrected. The rerun for the corrected commit is pending verification. Do not treat the build as release-ready until CI passes.
 
 Engines (`src/domain`, framework-free, deterministic, each result carries its source/approval reference):
 - Quantities and BOQ: room quantities, BOQ lines, room-to-BOQ synchronization that preserves commercial approvals, finishing assemblies.
@@ -19,7 +19,7 @@ Engines (`src/domain`, framework-free, deterministic, each result carries its so
 - Data: IndexedDB storage with one-time localStorage migration, offline queue with idempotent replay, three-way conflict resolution (protected fields are never auto-resolved).
 - Reports: bilingual (AR/EN) HTML report for print-to-PDF and a dependency-free `.xlsx` export (opened and checked with an independent reader).
 
-The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies and MEP takeoff have their own screens. The other engines are tested and available as a library but do not have their own screens yet.
+The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies, MEP takeoff, sourced CPM schedule and manual sync-conflict review have screens. Conflict review currently accepts explicit base/local/remote JSON snapshots; it is not connected to a real cross-device sync backend.
 
 ## Three delivery stages
 
@@ -31,7 +31,8 @@ The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Co
 
 - No drawing import, DXF/PDF/image reading, OCR, or scale calibration. Dimension observations must be entered or supplied by a future extraction component.
 - No server, user accounts, roles, or audit log. The sync queue and conflict resolution are implemented and tested against an in-memory reference server only; real cross-device sync needs a backend that implements the `SyncTransport` contract.
-- No screens yet for the schedule (critical path) or sync conflict review.
+- Sync conflict review is a manual snapshot tool until a real backend implements `SyncTransport`; no live cross-device conflict feed is connected.
+- No browser end-to-end tests have yet verified the new schedule and conflict-review screens.
 - PDF output is produced by the browser's print dialog from the HTML report, not by a PDF library.
 - No Windows desktop packaging.
 - No productivity-rate or material-price library: rates and prices must always be entered with a source.
@@ -46,7 +47,7 @@ The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Co
 
 ## Next implementation work
 
-1. Screens for adjustments, assemblies, MEP, variation orders, schedule, and conflict review.
+1. Browser end-to-end and visual checks for the schedule and conflict-review screens; validate bilingual labels and project persistence.
 2. Backend implementing `SyncTransport`, with authentication and roles.
 3. Drawing upload with revision metadata, then DXF/PDF extraction feeding the dimension audit.
 4. Windows packaging (e.g. Tauri) once the web application is stable.

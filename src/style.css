@@ -19,3 +19,5 @@
 
 .point-choices{border:1px solid var(--line,#d8d8d8);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;grid-column:1/-1}
 #mep-panel h3{margin:18px 0 8px}
+
+textarea{width:100%;min-width:0;border:1px solid #dce3dc;border-radius:8px;padding:10px;background:#fbfcfa;color:#24332a;font:12px/1.6 ui-monospace,Consolas,monospace;resize:vertical}.conflict-output{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9f6;padding:14px;border-radius:9px;font-size:11px}#schedule-panel,#conflict-review-panel{margin-top:18px}

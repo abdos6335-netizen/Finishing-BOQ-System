@@ -4,6 +4,7 @@ import type { CostAdjustment } from "./cost-engine";
 import type { VariationOrder } from "./variation-orders";
 import type { AssemblyDefinition } from "./finishing-assemblies";
 import type { MepTakeoffInput } from "./mep-takeoff";
+import type { SourcedScheduleActivity } from "./project-schedule";
 
 export type BuildingCondition =
   | "red-brick"
@@ -31,6 +32,7 @@ export interface ProjectRecord {
   variations?: VariationOrder[];
   assemblies?: AssemblyDefinition[];
   mep?: MepTakeoffInput;
+  scheduleActivities?: SourcedScheduleActivity[];
 }
 
 const STORAGE_KEY = "finishing-boq.projects.v1";
@@ -137,7 +139,8 @@ export function loadProjects(): ProjectRecord[] {
           (item.adjustments !== undefined && (!Array.isArray(item.adjustments) || !item.adjustments.every(isAdjustment))) ||
           (item.variations !== undefined && (!Array.isArray(item.variations) || !item.variations.every(isVariation))) ||
           (item.assemblies !== undefined && (!Array.isArray(item.assemblies) || !item.assemblies.every(isAssembly))) ||
-          (item.mep !== undefined && !isMep(item.mep))) return [];
+          (item.mep !== undefined && !isMep(item.mep)) ||
+          (item.scheduleActivities !== undefined && (!Array.isArray(item.scheduleActivities) || !item.scheduleActivities.every(a => isRecord(a) && typeof a.id === "string" && typeof a.name === "string" && typeof a.durationDays === "number" && Number.isFinite(a.durationDays) && typeof a.durationSourceRef === "string" && Array.isArray(a.predecessors) && a.predecessors.every(p => isRecord(p) && typeof p.id === "string" && ["FS", "SS", "FF"].includes(String(p.type)) && typeof p.lagDays === "number" && Number.isFinite(p.lagDays)))))) return [];
 
       const projectType: ProjectType =
         item.projectType === "villa" ? "villa" : "apartment";
@@ -157,7 +160,8 @@ export function loadProjects(): ProjectRecord[] {
         ...(Array.isArray(item.adjustments) ? { adjustments: item.adjustments as CostAdjustment[] } : {}),
         ...(Array.isArray(item.variations) ? { variations: item.variations as VariationOrder[] } : {}),
         ...(Array.isArray(item.assemblies) ? { assemblies: item.assemblies as AssemblyDefinition[] } : {}),
-        ...(isMep(item.mep) ? { mep: item.mep } : {})
+        ...(isMep(item.mep) ? { mep: item.mep } : {}),
+        ...(Array.isArray(item.scheduleActivities) ? { scheduleActivities: item.scheduleActivities as SourcedScheduleActivity[] } : {})
       }];
     });
   } catch {

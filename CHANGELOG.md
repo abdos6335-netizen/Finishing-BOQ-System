@@ -8,6 +8,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- Sourced project schedule screen using CPM (FS/SS/FF, lag, early/late dates, total float and critical activities); schedule activities persist with project data and every duration requires a source reference.
+- Manual three-snapshot sync conflict review UI (base/local/remote JSON), explicit per-field choices and protected engineering/financial fields; it previews the merged record but does not sync to another device until a real backend is connected.
+- 6 tests for sourced schedule and conflict review (110 total).
 - UI screens for finishing assemblies (explicit ratio and rule reference per component, versioned, idempotent apply to all rooms) and MEP takeoff (points with drawing reference and review flag, circuit schedule, cable runs from documented segments and approved allowances, verified-only sync to the BOQ). Rules live in `src/domain/project-takeoff.ts`.
 - 6 tests for assemblies, MEP and store round-trip (104 total).
 - UI screens for project currency, cost adjustments (approval reference and explicit base required) and variation orders (draft/submitted/approved/rejected, approved is immutable, revised total); exports now use the project's currency, adjustments and variations. Rules live in `src/domain/project-costing.ts`.

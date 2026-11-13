@@ -7,12 +7,16 @@ import { buildReportModel, buildXlsx, renderReportHtml } from "./domain/report-e
 import { addVariationItem, adjustmentsOf, buildAdjustment, buildVariationItem, canDeleteVariation, createVariation, nextVariationNumber, projectFinancials, removeVariationItem, variationsOf } from "./domain/project-costing";
 import { calculateVariation, transitionVariation, type VariationOrder, type VariationStatus } from "./domain/variation-orders";
 import { addAssemblyComponent, addMepCableRun, addMepCircuit, addMepPoint, applyAssemblyToProject, assembliesOf, createAssembly, mepOf, mepSummary, removeAssemblyComponent, removeMepCableRun, removeMepCircuit, removeMepPoint, syncMepToBoq, toggleMepPointReviewed } from "./domain/project-takeoff";
+import { buildSchedulePlan, type SourcedScheduleActivity } from "./domain/project-schedule";
+import { completeConflictReview, previewConflictReview, type ConflictReview } from "./domain/sync-conflict-review";
 import "./style.css";
 
 let projects: ProjectRecord[] = [];
 let activeProjectId = "";
 let storage: ProjectStorage | null = null;
 let language: "ar" | "en" = "ar";
+let conflictReviewState: ConflictReview<Record<string, unknown>> | null = null;
+let conflictMergedState: Record<string, unknown> | null = null;
 const copy = {
   ar: {
     brand:"FINISHING BOQ",subtitle:"نظام حصر كميات ومقايسات التشطيبات",projects:"المشروعات",newProject:"مشروع جديد",projectName:"اسم المشروع",
@@ -91,6 +95,10 @@ function render():void{
   document.querySelector("#welcome-create")?.addEventListener("click",()=>el("#new-project-panel").classList.remove("hidden"));
   el("#language-toggle").addEventListener("click",()=>{language=language==="ar"?"en":"ar";render();});
   document.querySelector<HTMLFormElement>("#project-form")?.addEventListener("submit",createProject);
+  document.querySelector<HTMLElement>("#schedule-panel")?.addEventListener("submit",scheduleSubmitHandler);
+  document.querySelector<HTMLElement>("#schedule-panel")?.addEventListener("click",scheduleClickHandler);
+  document.querySelector<HTMLElement>("#conflict-review-panel")?.addEventListener("submit",conflictReviewSubmitHandler);
+  document.querySelector<HTMLElement>("#conflict-review-panel")?.addEventListener("click",conflictReviewClickHandler);
   document.querySelector<HTMLFormElement>("#room-form")?.addEventListener("submit",addRoom);
   document.querySelector<HTMLFormElement>("#boq-form")?.addEventListener("submit",addBoqItem);
   document.querySelector<HTMLButtonElement>("#add-room-takeoff")?.addEventListener("click",addRoomTakeoff);
@@ -138,7 +146,7 @@ function renderProject(project:ProjectRecord):string{
     </section>
     <section class="panel room-editor-panel"><div class="panel-head"><div><span class="eyebrow">MEASURED GEOMETRY</span><h2>${t("measuredFaces")} &amp; ${t("openings")}</h2></div></div>
       <div id="room-editor-list">${project.rooms.map(renderRoomEditor).join("")||`<p class="muted">${t("noRooms")}</p>`}</div>
-    </section>${renderBoq(project)}${renderAssemblies(project)}${renderMep(project)}${renderCosting(project)}${renderVariations(project)}`;
+    </section>${renderBoq(project)}${renderAssemblies(project)}${renderMep(project)}${renderCosting(project)}${renderVariations(project)}${renderSchedule(project)}${renderConflictReview(project)}`;
 }
 function renderBoq(project:ProjectRecord):string{
   const summary=calculateBoq(project.boqItems);
@@ -387,6 +395,43 @@ function mepClickHandler(event:MouseEvent):void{
       window.alert(lines.join("\n"));
     }
   }catch(error){showError(error);}
+}
+
+
+function renderSchedule(project:ProjectRecord):string{
+ const a=project.scheduleActivities??[];let plan:ReturnType<typeof buildSchedulePlan>|null=null,err="";if(a.length){try{plan=buildSchedulePlan(a);}catch(e){err=e instanceof Error?e.message:"Invalid schedule";}}
+ const opts='<option value="">—</option>'+a.map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.name)+'</option>').join("");
+ const rows=a.map(x=>'<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.durationDays+'</td><td>'+escapeHtml(x.durationSourceRef)+'</td><td>'+escapeHtml(x.predecessors.map(p=>p.id+" "+p.type+" "+p.lagDays).join(", ")||"—")+'</td><td><button type="button" class="text-button danger" data-schedule-remove="'+escapeHtml(x.id)+'">'+(language==="ar"?"حذف":"Remove")+'</button></td></tr>').join("");
+ const result=plan?.cpm,rr=result?.rows.map(x=>'<tr><td>'+escapeHtml(x.name)+'</td><td>'+x.earlyStart+'</td><td>'+x.earlyFinish+'</td><td>'+x.lateStart+'</td><td>'+x.lateFinish+'</td><td>'+x.totalFloat+'</td><td class="'+(x.critical?"warn":"good")+'">'+(x.critical?"Critical":"Non-critical")+'</td></tr>').join("")??"";
+ return '<section class="panel boq-panel" id="schedule-panel"><h2>'+(language==="ar"?"الجدول الزمني والمسار الحرج":"Schedule & Critical Path")+'</h2><p class="hint">'+(language==="ar"?"كل مدة تحتاج مرجع مصدر صريح. العلاقات FS / SS / FF. لا توجد مدد أو إنتاجيات افتراضية.":"Every duration needs an explicit source. FS / SS / FF links. No assumed durations or productivity rates.")+'</p>'+
+ '<form id="schedule-form" class="boq-form"><label>'+(language==="ar"?"اسم النشاط":"Activity")+'<input name="name" required/></label><label>'+(language==="ar"?"المدة (أيام عمل)":"Duration (working days)")+'<input name="durationDays" type="number" min="0" step="0.25" required/></label><label>'+(language==="ar"?"مرجع المدة":"Duration source")+'<input name="durationSourceRef" required/></label><label>'+(language==="ar"?"النشاط السابق":"Predecessor")+'<select name="predecessorId">'+opts+'</select></label><label>Relationship<select name="relationship"><option>FS</option><option>SS</option><option>FF</option></select></label><label>'+(language==="ar"?"التأخير (أيام)":"Lag (days)")+'<input name="lagDays" type="number" step="0.25" value="0" required/></label><button class="primary" type="submit">'+(language==="ar"?"إضافة نشاط":"Add activity")+'</button></form>'+
+ '<div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>Activity</th><th>Days</th><th>Source</th><th>Predecessors</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">—</td></tr>')+'</tbody></table></div>'+
+ (err?'<p class="warn">'+escapeHtml(err)+'</p>':result?'<div class="boq-summary"><div><span>'+(language==="ar"?"مدة المشروع":"Project duration")+'</span><strong>'+result.projectDurationDays+' '+(language==="ar"?"يوم عمل":"working days")+'</strong></div><div><span>'+(language==="ar"?"الأنشطة الحرجة":"Critical activities")+'</span><strong>'+result.criticalActivityIds.length+'</strong></div></div><div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>Activity</th><th>ES</th><th>EF</th><th>LS</th><th>LF</th><th>Float</th><th>Critical?</th></tr></thead><tbody>'+rr+'</tbody></table></div>':'<p class="hint warn">'+(language==="ar"?"أضف أنشطة لحساب المسار الحرج.":"Add activities to calculate the critical path.")+'</p>')+
+ '<p class="hint">'+(language==="ar"?"الحساب لا يشمل موازنة الموارد.":"Resource levelling is not modelled.")+'</p></section>';
+}
+function scheduleSubmitHandler(e:SubmitEvent):void{
+ const form=e.target;if(!(form instanceof HTMLFormElement)||form.id!=="schedule-form")return;e.preventDefault();const p=activeProject();if(!p)return;const d=new FormData(form);
+ try{const dur=Number(d.get("durationDays")),lag=Number(d.get("lagDays"));if(!Number.isFinite(dur)||dur<0||!Number.isFinite(lag))throw new Error("Invalid duration or lag");
+ const pred=field(d,"predecessorId");const item:SourcedScheduleActivity={id:createId(),name:field(d,"name").trim(),durationDays:dur,durationSourceRef:field(d,"durationSourceRef").trim(),predecessors:pred?[{id:pred,type:field(d,"relationship") as "FS"|"SS"|"FF",lagDays:lag}]:[]};
+ const next=[...(p.scheduleActivities??[]),item];buildSchedulePlan(next);p.scheduleActivities=next;persist();}catch(error){showError(error);}
+}
+function scheduleClickHandler(e:MouseEvent):void{const target=e.target;if(!(target instanceof HTMLElement))return;const b=target.closest<HTMLButtonElement>("[data-schedule-remove]");if(!b)return;const p=activeProject();if(!p)return;const id=b.dataset.scheduleRemove;p.scheduleActivities=(p.scheduleActivities??[]).filter(x=>x.id!==id).map(x=>({...x,predecessors:x.predecessors.filter(q=>q.id!==id)}));persist();}
+function renderConflictReview(_p:ProjectRecord):string{
+ const cs=conflictReviewState?.preview.conflicts??[];
+ const rows=cs.map(x=>'<tr><td>'+escapeHtml(x.field)+'</td><td>'+escapeHtml(JSON.stringify(x.base))+'</td><td>'+escapeHtml(JSON.stringify(x.local))+'</td><td>'+escapeHtml(JSON.stringify(x.remote))+'</td><td>'+(x.protected?"Protected":"Regular")+'</td><td><select name="choice:'+escapeHtml(x.field)+'"><option value="">—</option><option value="local">Local</option><option value="remote">Remote</option></select></td></tr>').join("");
+ return '<section class="panel boq-panel" id="conflict-review-panel"><h2>'+(language==="ar"?"مراجعة تعارضات المزامنة":"Sync conflict review")+'</h2><p class="hint">'+(language==="ar"?"مراجعة يدوية لنسخ JSON. لا يوجد Backend مزامنة متصل حتى الآن، ولن تُرسل النتيجة لجهاز آخر.":"Manual JSON snapshot review. No sync backend is connected; results are not sent to another device.")+'</p>'+
+ '<form id="conflict-form" class="boq-form"><label>Base JSON<textarea name="base" rows="3" required></textarea></label><label>Local JSON<textarea name="local" rows="3" required></textarea></label><label>Remote JSON<textarea name="remote" rows="3" required></textarea></label><label>'+(language==="ar"?"الحقول المحمية":"Protected fields")+'<input name="protectedFields" value="quantity,unitRate,netQuantity,dimensions,area,amount,total"/></label><button class="primary" type="submit">'+(language==="ar"?"قارن النسخ":"Compare versions")+'</button></form>'+
+ (conflictReviewState?'<p class="hint">Status: '+conflictReviewState.preview.status+' · Conflicts: '+cs.length+'</p>':'')+
+ (cs.length?'<form id="conflict-choices-form"><div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>Field</th><th>Base</th><th>Local</th><th>Remote</th><th>Class</th><th>Choice</th></tr></thead><tbody>'+rows+'</tbody></table></div><button class="primary" type="button" data-conflict-resolve>Resolve preview</button></form>':'')+
+ (conflictMergedState?'<pre class="conflict-output">'+escapeHtml(JSON.stringify(conflictMergedState,null,2))+'</pre>':'')+'</section>';
+}
+function conflictReviewSubmitHandler(e:SubmitEvent):void{
+ const form=e.target;if(!(form instanceof HTMLFormElement)||form.id!=="conflict-form")return;e.preventDefault();try{const d=new FormData(form);const parse=(k:string):Record<string,unknown>=>{const v=JSON.parse(field(d,k));if(!v||typeof v!=="object"||Array.isArray(v))throw new Error(k+" must be a JSON object");return v as Record<string,unknown>;};conflictReviewState=previewConflictReview({base:parse("base"),local:parse("local"),remote:parse("remote"),protectedFields:field(d,"protectedFields").split(",").map(x=>x.trim()).filter(Boolean)});conflictMergedState=null;render();}catch(error){showError(error);}
+}
+function conflictReviewClickHandler(e:MouseEvent):void{
+ const target=e.target;if(!(target instanceof HTMLElement)||!target.closest("[data-conflict-resolve]")||!conflictReviewState)return;const form=document.querySelector<HTMLFormElement>("#conflict-choices-form");if(!form)return;const d=new FormData(form),choices:Record<string,"local"|"remote">={};
+ for(const x of conflictReviewState.preview.conflicts){const choice=String(d.get("choice:"+x.field));if(choice!=="local"&&choice!=="remote"){showError(new Error("Choose a side for "+x.field));return;}choices[x.field]=choice;}
+ try{conflictMergedState=completeConflictReview(conflictReviewState,choices);render();}catch(error){showError(error);}
 }
 
 function renderCosting(project:ProjectRecord):string{

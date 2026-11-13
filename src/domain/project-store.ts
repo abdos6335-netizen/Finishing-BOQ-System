@@ -1,5 +1,7 @@
 import type { RoomInput } from "./quantity-engine";
 import type { BoqItemInput } from "./boq-engine";
+import type { CostAdjustment } from "./cost-engine";
+import type { VariationOrder } from "./variation-orders";
 
 export type BuildingCondition =
   | "red-brick"
@@ -21,6 +23,10 @@ export interface ProjectRecord {
   createdAt: string;
   rooms: RoomInput[];
   boqItems: BoqItemInput[];
+  /** Added after the first release; absent on older records and treated as empty. */
+  currency?: string;
+  adjustments?: CostAdjustment[];
+  variations?: VariationOrder[];
 }
 
 const STORAGE_KEY = "finishing-boq.projects.v1";
@@ -39,6 +45,34 @@ function isBoqItem(value: unknown): value is BoqItemInput {
     typeof value.description === "string" &&
     ["m", "m2", "m3", "pcs"].includes(String(value.unit)) &&
     typeof value.netQuantity === "number" && typeof value.sourceRef === "string";
+}
+
+const ADJUSTMENT_KINDS = ["transport", "engineer-fee", "overhead", "contingency", "profit", "tax", "other"];
+const VARIATION_STATUSES = ["draft", "submitted", "approved", "rejected"];
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isAdjustment(value: unknown): value is CostAdjustment {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string" && typeof value.label === "string" &&
+    ADJUSTMENT_KINDS.includes(String(value.kind)) &&
+    typeof value.order === "number" && Number.isInteger(value.order) &&
+    typeof value.approvalRef === "string" && typeof value.clientVisible === "boolean" &&
+    isOptionalNumber(value.ratePct) && isOptionalNumber(value.fixedAmount) &&
+    (value.base === undefined || value.base === "direct" || value.base === "cumulative");
+}
+
+function isVariation(value: unknown): value is VariationOrder {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string" && typeof value.number === "string" &&
+    typeof value.title === "string" && typeof value.reason === "string" &&
+    typeof value.baseRevision === "string" && typeof value.createdAt === "string" &&
+    VARIATION_STATUSES.includes(String(value.status)) &&
+    (value.approvalRef === undefined || typeof value.approvalRef === "string") &&
+    Array.isArray(value.items) &&
+    value.items.every(entry => isRecord(entry) && (entry.direction === "addition" || entry.direction === "omission") && isBoqItem(entry.item));
 }
 
 function isRoom(value: unknown): value is RoomInput {
@@ -69,7 +103,10 @@ export function loadProjects(): ProjectRecord[] {
           typeof item.createdAt !== "string" ||
           !Array.isArray(item.rooms) ||
           !item.rooms.every(isRoom) ||
-          (item.boqItems !== undefined && (!Array.isArray(item.boqItems) || !item.boqItems.every(isBoqItem)))) return [];
+          (item.boqItems !== undefined && (!Array.isArray(item.boqItems) || !item.boqItems.every(isBoqItem))) ||
+          (item.currency !== undefined && typeof item.currency !== "string") ||
+          (item.adjustments !== undefined && (!Array.isArray(item.adjustments) || !item.adjustments.every(isAdjustment))) ||
+          (item.variations !== undefined && (!Array.isArray(item.variations) || !item.variations.every(isVariation)))) return [];
 
       const projectType: ProjectType =
         item.projectType === "villa" ? "villa" : "apartment";
@@ -84,7 +121,10 @@ export function loadProjects(): ProjectRecord[] {
         buildingCondition,
         createdAt: item.createdAt,
         rooms: item.rooms,
-        boqItems: Array.isArray(item.boqItems) ? item.boqItems : []
+        boqItems: Array.isArray(item.boqItems) ? item.boqItems : [],
+        ...(typeof item.currency === "string" ? { currency: item.currency } : {}),
+        ...(Array.isArray(item.adjustments) ? { adjustments: item.adjustments as CostAdjustment[] } : {}),
+        ...(Array.isArray(item.variations) ? { variations: item.variations as VariationOrder[] } : {})
       }];
     });
   } catch {

@@ -8,6 +8,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- UI screens for project currency, cost adjustments (approval reference and explicit base required) and variation orders (draft/submitted/approved/rejected, approved is immutable, revised total); exports now use the project's currency, adjustments and variations. Rules live in `src/domain/project-costing.ts`.
+- 7 tests for project costing and store round-trip (98 total).
 - Domain engines: dimension audit, finishing assemblies, productivity, cost roll-up, variation orders, MEP takeoff, critical path, project hierarchy.
 - IndexedDB project storage with one-time migration from localStorage.
 - Offline sync queue (idempotent replay), in-memory reference server, and three-way conflict resolution.

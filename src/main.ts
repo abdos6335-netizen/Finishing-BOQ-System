@@ -4,6 +4,8 @@ import { createId, loadProjects, saveProjects, type BuildingCondition, type Proj
 import { generateRoomBoqItems } from "./domain/room-boq-link";
 import { IndexedDbProjectStorage, migrateFromLocalStorage, type ProjectStorage } from "./domain/storage";
 import { buildReportModel, buildXlsx, renderReportHtml } from "./domain/report-export";
+import { addVariationItem, adjustmentsOf, buildAdjustment, buildVariationItem, canDeleteVariation, createVariation, nextVariationNumber, projectFinancials, removeVariationItem, variationsOf } from "./domain/project-costing";
+import { calculateVariation, transitionVariation, type VariationOrder, type VariationStatus } from "./domain/variation-orders";
 import "./style.css";
 
 let projects: ProjectRecord[] = [];
@@ -16,7 +18,9 @@ const copy = {
     type:"نوع المشروع",apartment:"شقة",villa:"فيلا",buildingCondition:"حالة المبنى",brick:"مبنى على الطوب الأحمر (بدون تشطيب)",renovation:"تجديد وإعادة تشطيب",plaster:"محارة فقط",semiFinished:"نصف تشطيب",fullyFinished:"متشطب بالكامل",alteration:"تعديل تقسيمات داخلية وهدم وبناء جديد",shell:"هيكل خرساني (Concrete Shell)",unspecified:"غير محددة / مشروع قديم",create:"إنشاء المشروع",room:"إضافة غرفة",roomName:"اسم الغرفة",length:"الطول (م)",width:"العرض (م)",
     height:"الارتفاع (م)",addRoom:"حفظ الغرفة",overview:"ملخص المشروع",floor:"مساحة الأرضيات",walls:"صافي الحوائط",ceiling:"مساحة الأسقف",
     gross:"إجمالي الحوائط",deductions:"خصم الفتحات",perimeter:"المحيط",rooms:"الغرف",empty:"ابدأ بإنشاء مشروع ثم أضف الغرف لعرض الحصر.",
-    noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",exportXlsx:"تصدير Excel",printReport:"تقرير PDF / طباعة",currencyPrompt:"أدخل عملة التقرير (مثال: EGP):",storageError:"تعذّر حفظ البيانات في قاعدة البيانات المحلية.",language:"English",
+    noRooms:"لا توجد غرف مضافة بعد.",verified:"اجتاز المراجعة الحسابية",review:"يحتاج مراجعة",export:"تصدير CSV",exportXlsx:"تصدير Excel",printReport:"تقرير PDF / طباعة",currencyPrompt:"أدخل عملة التقرير (مثال: EGP):",storageError:"تعذّر حفظ البيانات في قاعدة البيانات المحلية.",costing:"التكلفة والإضافات",currency:"عملة المشروع",currencyPlaceholder:"مثال: EGP",adjLabel:"اسم الإضافة",adjKind:"النوع",kTransport:"نقل",kEngineerFee:"أتعاب هندسية",kOverhead:"مصروفات عامة",kContingency:"احتياطي",kProfit:"ربح",kTax:"ضريبة",kOther:"أخرى",adjRate:"نسبة %",adjFixed:"مبلغ ثابت",adjBase:"أساس النسبة",baseDirect:"التكلفة المباشرة",baseCumulative:"التراكمي (شامل ما قبلها)",adjOrder:"الترتيب",adjApproval:"مرجع الاعتماد",adjVisible:"ظاهرة للعميل",addAdjustment:"إضافة",directSubtotal:"التكلفة المباشرة",adjustmentsTotal:"إجمالي الإضافات",grandTotal:"الإجمالي النهائي",costIncomplete:"الإجمالي غير مكتمل: توجد بنود غير مسعّرة أو تحتاج مراجعة.",costComplete:"كل البنود مسعّرة ومراجَعة.",adjHint:"كل إضافة تحتاج مرجع اعتماد. لا توجد نسب افتراضية: أدخل نسبة مع أساس صريح، أو مبلغًا ثابتًا، وليس الاثنين.",hiddenLabel:"مخفية عن العميل",noAdjustments:"لا توجد إضافات بعد.",currencyMissing:"لم تُدخل عملة بعد.",
+variations:"الأعمال الإضافية (أوامر التغيير)",newVariation:"أمر تغيير جديد",voNumber:"الرقم",voTitle:"العنوان",voReason:"السبب",voBaseRevision:"إصدار المقايسة الأساسي",createVariation:"إنشاء الأمر",stDraft:"مسودة",stSubmitted:"مقدَّم",stApproved:"معتمد",stRejected:"مرفوض",voAddition:"إضافة",voOmission:"حذف من المقايسة",voDirection:"النوع",voSubmit:"تقديم",voApprove:"اعتماد",voReject:"رفض",voReopen:"إعادة لمسودة",voDelete:"حذف الأمر",voApprovalPrompt:"أدخل مرجع اعتماد الأمر:",voTotal:"صافي الأمر",voBaseTotal:"الإجمالي الأساسي",voApprovedTotal:"الأعمال المعتمدة",voRevisedTotal:"الإجمالي المعدّل",voPendingTotal:"قيد الاعتماد",voLocked:"لا يمكن تعديل البنود إلا في المسودة.",noVariations:"لا توجد أوامر تغيير.",voIncomplete:"أوامر بها بنود غير مسعّرة",voNoItems:"لا توجد بنود.",addVoItem:"إضافة بند",
+language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
     deduct:"تُخصم من المساحة",noFaces:"لم تُسجل أوجه حوائط مقاسة بعد.",remove:"حذف",measuredFaces:"أوجه الحوائط المقاسة",openings:"الفتحات",createError:"راجع القيم المدخلة.",boq:"بنود المقايسة",boqCode:"كود البند",boqDescription:"وصف البند",boqUnit:"الوحدة",boqQuantity:"الكمية الصافية",boqSource:"مرجع مصدر الكمية",wasteRate:"هالك معتمد %",wasteApproval:"مرجع اعتماد الهالك",unitRate:"سعر الوحدة",rateSource:"مرجع السعر",costBasis:"أساس التسعير",netBasis:"صافي الكمية",orderBasis:"كمية التوريد",addBoq:"إضافة بند",subtotal:"إجمالي البنود المسعرة",unpriced:"بنود بلا تسعير",lineTotal:"الإجمالي",removeItem:"حذف البند",boqStatus:"حالة المراجعة",addRoomTakeoff:"إضافة كميات الغرف للمقايسة",takeoffAdded:"تمت إضافة الكميات الجديدة",takeoffUpdated:"تم تحديث كميات مرتبطة بتغيّر القياسات",takeoffSkipped:"بنود لم تتغير",wallTakeoffReview:"حوائط تحتاج مراجعة",staleWallTakeoff:"بنود حوائط سابقة أصبحت غير محدثة وتحتاج مراجعة"
@@ -26,7 +30,9 @@ const copy = {
     type:"Project type",apartment:"Apartment",villa:"Villa",buildingCondition:"Existing building condition",brick:"Red brick / unfinished",renovation:"Renovation & refit",plaster:"Plaster only",semiFinished:"Semi-finished",fullyFinished:"Fully finished",alteration:"Internal alterations, demolition & new walls",shell:"New concrete shell",unspecified:"Unspecified / legacy project",create:"Create project",room:"Add room",roomName:"Room name",length:"Length (m)",width:"Width (m)",
     height:"Height (m)",addRoom:"Save room",overview:"Project overview",floor:"Floor area",walls:"Net wall area",ceiling:"Ceiling area",
     gross:"Gross walls",deductions:"Opening deductions",perimeter:"Perimeter",rooms:"Rooms",empty:"Create a project, then add rooms to see the takeoff.",
-    noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",exportXlsx:"Export Excel",printReport:"PDF report / print",currencyPrompt:"Enter the report currency (e.g. EGP):",storageError:"Could not save to the local database.",language:"العربية",
+    noRooms:"No rooms added yet.",verified:"Arithmetic checks passed",review:"Needs review",export:"Export CSV",exportXlsx:"Export Excel",printReport:"PDF report / print",currencyPrompt:"Enter the report currency (e.g. EGP):",storageError:"Could not save to the local database.",costing:"Cost & adjustments",currency:"Project currency",currencyPlaceholder:"e.g. EGP",adjLabel:"Adjustment name",adjKind:"Kind",kTransport:"Transport",kEngineerFee:"Engineering fee",kOverhead:"Overhead",kContingency:"Contingency",kProfit:"Profit",kTax:"Tax",kOther:"Other",adjRate:"Rate %",adjFixed:"Fixed amount",adjBase:"Rate base",baseDirect:"Direct cost",baseCumulative:"Cumulative (incl. earlier adjustments)",adjOrder:"Order",adjApproval:"Approval reference",adjVisible:"Visible to client",addAdjustment:"Add",directSubtotal:"Direct cost",adjustmentsTotal:"Adjustments total",grandTotal:"Grand total",costIncomplete:"The total is incomplete: some items are unpriced or need review.",costComplete:"All items are priced and verified.",adjHint:"Every adjustment needs an approval reference. There are no default rates: enter a rate with an explicit base, or a fixed amount, not both.",hiddenLabel:"Hidden from client",noAdjustments:"No adjustments yet.",currencyMissing:"No currency entered yet.",
+variations:"Variation orders",newVariation:"New variation order",voNumber:"Number",voTitle:"Title",voReason:"Reason",voBaseRevision:"Base BOQ revision",createVariation:"Create order",stDraft:"Draft",stSubmitted:"Submitted",stApproved:"Approved",stRejected:"Rejected",voAddition:"Addition",voOmission:"Omission from BOQ",voDirection:"Type",voSubmit:"Submit",voApprove:"Approve",voReject:"Reject",voReopen:"Back to draft",voDelete:"Delete order",voApprovalPrompt:"Enter the approval reference for this order:",voTotal:"Order net",voBaseTotal:"Base total",voApprovedTotal:"Approved variations",voRevisedTotal:"Revised total",voPendingTotal:"Pending approval",voLocked:"Items can only be edited while the order is a draft.",noVariations:"No variation orders yet.",voIncomplete:"Orders with unpriced items",voNoItems:"No items.",addVoItem:"Add item",
+language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
     deduct:"Deduct from wall area",noFaces:"No measured wall faces have been entered yet.",remove:"Remove",measuredFaces:"Measured wall faces",openings:"Openings",createError:"Check the entered values.",boq:"Bill of Quantities",boqCode:"Item code",boqDescription:"Item description",boqUnit:"Unit",boqQuantity:"Net quantity",boqSource:"Quantity source reference",wasteRate:"Approved waste %",wasteApproval:"Waste approval reference",unitRate:"Unit rate",rateSource:"Rate source reference",costBasis:"Cost basis",netBasis:"Net quantity",orderBasis:"Order quantity",addBoq:"Add BOQ item",subtotal:"Priced subtotal",unpriced:"Unpriced items",lineTotal:"Line total",removeItem:"Remove item",boqStatus:"Review status",addRoomTakeoff:"Add room quantities to BOQ",takeoffAdded:"New quantities added",takeoffUpdated:"Linked quantities refreshed after measurement changes",takeoffSkipped:"Unchanged items",wallTakeoffReview:"Wall measurements need review",staleWallTakeoff:"Previous wall BOQ snapshots are stale and need review"
@@ -89,6 +95,13 @@ function render():void{
   document.querySelector<HTMLButtonElement>("#export-csv")?.addEventListener("click",exportCsv);
   document.querySelector<HTMLButtonElement>("#export-xlsx")?.addEventListener("click",exportXlsx);
   document.querySelector<HTMLButtonElement>("#print-report")?.addEventListener("click",printReport);
+  document.querySelector<HTMLInputElement>("#project-currency")?.addEventListener("change",saveCurrency);
+  const costPanel=document.querySelector<HTMLElement>("#cost-panel");
+  costPanel?.addEventListener("submit",addAdjustmentHandler);
+  costPanel?.addEventListener("click",removeAdjustmentHandler);
+  const variationPanel=document.querySelector<HTMLElement>("#variation-panel");
+  variationPanel?.addEventListener("submit",variationSubmitHandler);
+  variationPanel?.addEventListener("click",variationClickHandler);
 }
 function renderProject(project:ProjectRecord):string{
   const results=project.rooms.map(room=>({room,result:calculateRoomQuantities(room)}));
@@ -114,7 +127,7 @@ function renderProject(project:ProjectRecord):string{
     </section>
     <section class="panel room-editor-panel"><div class="panel-head"><div><span class="eyebrow">MEASURED GEOMETRY</span><h2>${t("measuredFaces")} &amp; ${t("openings")}</h2></div></div>
       <div id="room-editor-list">${project.rooms.map(renderRoomEditor).join("")||`<p class="muted">${t("noRooms")}</p>`}</div>
-    </section>${renderBoq(project)}`;
+    </section>${renderBoq(project)}${renderCosting(project)}${renderVariations(project)}`;
 }
 function renderBoq(project:ProjectRecord):string{
   const summary=calculateBoq(project.boqItems);
@@ -208,10 +221,154 @@ function exportCsv():void{
   const csv="\uFEFF"+rows.map(row=>row.map(value=>`"${value.replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download=`${project.name.replace(/[^\p{L}\p{N}-]+/gu,"-")}-takeoff.csv`;a.click();URL.revokeObjectURL(url);
 }
+
+const KIND_LABELS:Record<string,keyof typeof copy.ar>={transport:"kTransport","engineer-fee":"kEngineerFee",overhead:"kOverhead",contingency:"kContingency",profit:"kProfit",tax:"kTax",other:"kOther"};
+const STATUS_LABELS:Record<VariationStatus,keyof typeof copy.ar>={draft:"stDraft",submitted:"stSubmitted",approved:"stApproved",rejected:"stRejected"};
+function field(data:FormData,name:string):string{return String(data.get(name)??"");}
+function showError(error:unknown):void{window.alert(error instanceof Error?error.message:t("createError"));}
+function money(value:number|null):string{return value===null?"—":value.toFixed(2);}
+
+function renderCosting(project:ProjectRecord):string{
+  let financials;
+  try{financials=projectFinancials(project);}catch(error){return `<section class="panel boq-panel"><p class="warn">${escapeHtml(error instanceof Error?error.message:t("createError"))}</p></section>`;}
+  const {cost,currencyMissing}=financials;
+  const orderById=new Map(adjustmentsOf(project).map(a=>[a.id,a.order]));
+  const kinds=Object.keys(KIND_LABELS).map(kind=>`<option value="${kind}">${t(KIND_LABELS[kind])}</option>`).join("");
+  const rows=cost.adjustments.map(a=>`<tr><td>${orderById.get(a.id)??""}</td><td>${escapeHtml(a.label)}<small>${escapeHtml(a.approvalRef)}</small></td><td>${t(KIND_LABELS[a.kind])}</td><td>${a.ratePct===null?"—":`${a.ratePct}% · ${a.base==="cumulative"?t("baseCumulative"):t("baseDirect")}`}</td><td>${money(a.amount)}</td><td class="warn">${a.clientVisible?"":t("hiddenLabel")}</td><td><button class="text-button danger" data-remove-adjustment="${escapeHtml(a.id)}">${t("remove")}</button></td></tr>`).join("");
+  return `<section class="panel boq-panel" id="cost-panel"><div class="panel-head"><div><span class="eyebrow">COST SUMMARY</span><h2>${t("costing")}</h2></div></div>
+    <label class="currency-label">${t("currency")}<input id="project-currency" maxlength="12" value="${escapeHtml(project.currency??"")}" placeholder="${t("currencyPlaceholder")}"/></label>
+    ${currencyMissing?`<p class="hint warn">${t("currencyMissing")}</p>`:""}
+    <form id="adjustment-form" class="boq-form">
+      <label>${t("adjLabel")}<input name="label" required maxlength="80"/></label>
+      <label>${t("adjKind")}<select name="kind">${kinds}</select></label>
+      <label>${t("adjRate")}<input name="ratePct" type="number" min="0" step="0.01"/></label>
+      <label>${t("adjBase")}<select name="base"><option value="direct">${t("baseDirect")}</option><option value="cumulative">${t("baseCumulative")}</option></select></label>
+      <label>${t("adjFixed")}<input name="fixedAmount" type="number" min="0" step="0.01"/></label>
+      <label>${t("adjOrder")}<input name="order" type="number" step="1" placeholder="auto"/></label>
+      <label>${t("adjApproval")}<input name="approvalRef" required maxlength="160"/></label>
+      <label class="check-label"><input name="clientVisible" type="checkbox" checked/> ${t("adjVisible")}</label>
+      <button class="primary" type="submit">${t("addAdjustment")}</button>
+    </form>
+    <p class="hint">${t("adjHint")}</p>
+    <div class="boq-summary"><div><span>${t("directSubtotal")}</span><strong>${money(cost.directSubtotal)}</strong></div><div><span>${t("adjustmentsTotal")}</span><strong>${money(cost.adjustmentsTotal)}</strong></div><div><span>${t("grandTotal")} (${escapeHtml(cost.currency)})</span><strong>${money(cost.grandTotal)}</strong></div></div>
+    <p class="hint ${cost.complete?"good":"warn"}">${cost.complete?t("costComplete"):t("costIncomplete")}</p>
+    <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("adjOrder")}</th><th>${t("adjLabel")}</th><th>${t("adjKind")}</th><th>${t("adjRate")}</th><th>${t("lineTotal")}</th><th></th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="7" class="muted">${t("noAdjustments")}</td></tr>`}</tbody></table></div>
+  </section>`;
+}
+
+function renderVariations(project:ProjectRecord):string{
+  const list=variationsOf(project);
+  let revisedHtml="";
+  try{
+    const {revised}=projectFinancials(project);
+    if(revised){
+      revisedHtml=`<div class="boq-summary"><div><span>${t("voBaseTotal")}</span><strong>${money(revised.baseTotal)}</strong></div><div><span>${t("voApprovedTotal")}</span><strong>${money(revised.approvedVariationsTotal)}</strong></div><div><span>${t("voRevisedTotal")}</span><strong>${money(revised.revisedTotal)}</strong></div><div><span>${t("voPendingTotal")}</span><strong>${money(revised.pendingVariationsTotal)}</strong></div></div>${revised.incompleteVariationNumbers.length?`<p class="hint warn">${t("voIncomplete")}: ${escapeHtml(revised.incompleteVariationNumbers.join(", "))}</p>`:""}`;
+    }
+  }catch(error){revisedHtml=`<p class="hint warn">${escapeHtml(error instanceof Error?error.message:t("createError"))}</p>`;}
+  const cards=list.map(vo=>renderVariationCard(vo)).join("")||`<p class="muted">${t("noVariations")}</p>`;
+  return `<section class="panel boq-panel" id="variation-panel"><div class="panel-head"><div><span class="eyebrow">CHANGE CONTROL</span><h2>${t("variations")}</h2></div></div>
+    <form id="variation-form" class="boq-form">
+      <label>${t("voNumber")}<input name="number" required maxlength="30" value="${escapeHtml(nextVariationNumber(list))}"/></label>
+      <label>${t("voTitle")}<input name="title" required maxlength="120"/></label>
+      <label>${t("voReason")}<input name="reason" required maxlength="200"/></label>
+      <label>${t("voBaseRevision")}<input name="baseRevision" required maxlength="60"/></label>
+      <button class="primary" type="submit">${t("createVariation")}</button>
+    </form>
+    ${revisedHtml}${cards}
+  </section>`;
+}
+
+function renderVariationCard(vo:VariationOrder):string{
+  let totalText="—",checks:string[]=[];
+  const lines=vo.items.map(entry=>{
+    try{const r=calculateVariation({...vo,items:[entry]});const line=r.lines[0].result;return `<tr><td>${entry.direction==="omission"?t("voOmission"):t("voAddition")}</td><td>${escapeHtml(line.code)}</td><td>${escapeHtml(line.description)}<small>${escapeHtml(line.sourceRef)}</small></td><td>${line.netQuantity} ${line.unit}</td><td>${money(line.unitRate)}</td><td>${money(line.lineTotal)}</td><td>${vo.status==="draft"?`<button class="text-button danger" data-remove-vo-item="${escapeHtml(entry.item.id)}" data-vo-id="${escapeHtml(vo.id)}">${t("remove")}</button>`:""}</td></tr>`;}
+    catch(error){return `<tr><td colspan="7" class="warn">${escapeHtml(error instanceof Error?error.message:t("createError"))}</td></tr>`;}
+  }).join("");
+  try{const r=calculateVariation(vo);totalText=money(r.total);checks=r.checks;}catch(error){checks=[error instanceof Error?error.message:t("createError")];}
+  const draft=vo.status==="draft";
+  const actions=[
+    draft?`<button class="outline" data-vo-action="submitted" data-vo-id="${escapeHtml(vo.id)}">${t("voSubmit")}</button>`:"",
+    vo.status==="submitted"?`<button class="outline" data-vo-action="approved" data-vo-id="${escapeHtml(vo.id)}">${t("voApprove")}</button><button class="outline" data-vo-action="rejected" data-vo-id="${escapeHtml(vo.id)}">${t("voReject")}</button><button class="outline" data-vo-action="draft" data-vo-id="${escapeHtml(vo.id)}">${t("voReopen")}</button>`:"",
+    vo.status==="rejected"?`<button class="outline" data-vo-action="draft" data-vo-id="${escapeHtml(vo.id)}">${t("voReopen")}</button>`:"",
+    canDeleteVariation(vo)?`<button class="text-button danger" data-vo-delete="1" data-vo-id="${escapeHtml(vo.id)}">${t("voDelete")}</button>`:""
+  ].join("");
+  const itemForm=draft?`<form class="boq-form vo-item-form" data-vo-id="${escapeHtml(vo.id)}">
+      <label>${t("voDirection")}<select name="direction"><option value="addition">${t("voAddition")}</option><option value="omission">${t("voOmission")}</option></select></label>
+      <label>${t("boqCode")}<input name="code" required maxlength="40"/></label>
+      <label>${t("boqDescription")}<input name="description" required maxlength="180"/></label>
+      <label>${t("boqUnit")}<select name="unit"><option value="m">m</option><option value="m2">m²</option><option value="m3">m³</option><option value="pcs">pcs</option></select></label>
+      <label>${t("boqQuantity")}<input name="netQuantity" type="number" min="0" step="0.0001" required/></label>
+      <label>${t("boqSource")}<input name="sourceRef" required maxlength="160"/></label>
+      <label>${t("unitRate")}<input name="unitRate" type="number" min="0" step="0.01"/></label>
+      <label>${t("rateSource")}<input name="rateSourceRef" maxlength="160"/></label>
+      <button class="primary" type="submit">${t("addVoItem")}</button></form>`:`<p class="hint">${t("voLocked")}</p>`;
+  return `<article class="room-editor"><div class="room-editor-head"><div><strong>${escapeHtml(vo.number)} · ${escapeHtml(vo.title)}</strong><small>${escapeHtml(vo.reason)} · ${escapeHtml(vo.baseRevision)}${vo.approvalRef?` · ${escapeHtml(vo.approvalRef)}`:""}</small></div><span class="room-state ${vo.status==="approved"?"good":"warn"}">${t(STATUS_LABELS[vo.status])} · ${t("voTotal")}: ${totalText}</span></div>
+    <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("voDirection")}</th><th>${t("boqCode")}</th><th>${t("boqDescription")}</th><th>${t("boqQuantity")}</th><th>${t("unitRate")}</th><th>${t("lineTotal")}</th><th></th></tr></thead><tbody>${lines||`<tr><td colspan="7" class="muted">${t("voNoItems")}</td></tr>`}</tbody></table></div>
+    ${checks.length?`<ul class="validation-list">${checks.map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul>`:""}
+    ${itemForm}<div class="actions vo-actions">${actions}</div></article>`;
+}
+
+function saveCurrency(event:Event):void{
+  const project=activeProject();const input=event.target;if(!project||!(input instanceof HTMLInputElement))return;
+  project.currency=input.value.trim();persist();
+}
+function addAdjustmentHandler(event:SubmitEvent):void{
+  const form=event.target;if(!(form instanceof HTMLFormElement)||form.id!=="adjustment-form")return;
+  event.preventDefault();const project=activeProject();if(!project)return;const data=new FormData(form);
+  try{
+    const adjustment=buildAdjustment(project,{label:field(data,"label"),kind:field(data,"kind"),ratePct:field(data,"ratePct"),fixedAmount:field(data,"fixedAmount"),base:field(data,"base"),order:field(data,"order"),approvalRef:field(data,"approvalRef"),clientVisible:data.get("clientVisible")==="on"},createId());
+    project.adjustments=[...adjustmentsOf(project),adjustment];persist();
+  }catch(error){showError(error);}
+}
+function removeAdjustmentHandler(event:MouseEvent):void{
+  const target=event.target;if(!(target instanceof HTMLElement))return;const button=target.closest<HTMLButtonElement>("[data-remove-adjustment]");if(!button)return;
+  const project=activeProject();if(!project)return;
+  project.adjustments=adjustmentsOf(project).filter(a=>a.id!==button.dataset.removeAdjustment);persist();
+}
+function replaceVariation(project:ProjectRecord,updated:VariationOrder):void{
+  project.variations=variationsOf(project).map(vo=>vo.id===updated.id?updated:vo);
+}
+function variationSubmitHandler(event:SubmitEvent):void{
+  const form=event.target;if(!(form instanceof HTMLFormElement))return;
+  const project=activeProject();if(!project)return;
+  if(form.id==="variation-form"){
+    event.preventDefault();const data=new FormData(form);
+    try{
+      const vo=createVariation(variationsOf(project),{number:field(data,"number"),title:field(data,"title"),reason:field(data,"reason"),baseRevision:field(data,"baseRevision")},createId(),new Date().toISOString());
+      project.variations=[...variationsOf(project),vo];persist();
+    }catch(error){showError(error);}
+    return;
+  }
+  if(form.classList.contains("vo-item-form")){
+    event.preventDefault();const data=new FormData(form);
+    const vo=variationsOf(project).find(item=>item.id===form.dataset.voId);if(!vo)return;
+    try{
+      const entry=buildVariationItem({direction:field(data,"direction"),code:field(data,"code"),description:field(data,"description"),unit:field(data,"unit"),netQuantity:field(data,"netQuantity"),sourceRef:field(data,"sourceRef"),unitRate:field(data,"unitRate"),rateSourceRef:field(data,"rateSourceRef")},createId());
+      replaceVariation(project,addVariationItem(vo,entry));persist();
+    }catch(error){showError(error);}
+  }
+}
+function variationClickHandler(event:MouseEvent):void{
+  const target=event.target;if(!(target instanceof HTMLElement))return;
+  const button=target.closest<HTMLButtonElement>("[data-vo-action],[data-vo-delete],[data-remove-vo-item]");if(!button)return;
+  const project=activeProject();if(!project)return;
+  const vo=variationsOf(project).find(item=>item.id===button.dataset.voId);if(!vo)return;
+  try{
+    if(button.dataset.voDelete){
+      if(!canDeleteVariation(vo))throw new Error(`${vo.number}: ${t("voLocked")}`);
+      project.variations=variationsOf(project).filter(item=>item.id!==vo.id);persist();return;
+    }
+    if(button.dataset.removeVoItem){replaceVariation(project,removeVariationItem(vo,button.dataset.removeVoItem));persist();return;}
+    const next=button.dataset.voAction as VariationStatus;
+    let approvalRef:string|undefined;
+    if(next==="approved"){const answer=window.prompt(t("voApprovalPrompt"));if(answer===null||!answer.trim())return;approvalRef=answer;}
+    replaceVariation(project,transitionVariation(vo,next,approvalRef));persist();
+  }catch(error){showError(error);}
+}
 function reportInput(project:ProjectRecord){
-  const currency=window.prompt(t("currencyPrompt"))?.trim();
+  const currency=(project.currency??"").trim()||window.prompt(t("currencyPrompt"))?.trim();
   if(!currency)return null;
-  return{projectName:project.name,buildingCondition:project.buildingCondition,generatedAt:new Date().toISOString().slice(0,10),currency,rooms:project.rooms,items:project.boqItems,adjustments:[]};
+  return{projectName:project.name,buildingCondition:project.buildingCondition,generatedAt:new Date().toISOString().slice(0,10),currency,rooms:project.rooms,items:project.boqItems,adjustments:adjustmentsOf(project),variations:variationsOf(project)};
 }
 function exportXlsx():void{
   const project=activeProject();if(!project)return;

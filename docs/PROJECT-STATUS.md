@@ -7,7 +7,7 @@
 
 ## Verified implementation state (2026-11-13)
 
-Latest code adds the schedule and conflict-review screens plus 6 tests. GitHub Actions run #49 exposed 2 incorrect assertions in the new conflict-review fixture (the engine correctly treated a one-sided field change as non-conflicting); the fixture was corrected. The rerun for the corrected commit is pending verification. Do not treat the build as release-ready until CI passes.
+Latest code adds the schedule and conflict-review screens plus 6 tests. GitHub Actions run #54 passed: **110 tests in 12 files pass and `npm run build` succeeds**. This verifies unit/integration rules and compilation, not browser end-to-end behavior.
 
 Engines (`src/domain`, framework-free, deterministic, each result carries its source/approval reference):
 - Quantities and BOQ: room quantities, BOQ lines, room-to-BOQ synchronization that preserves commercial approvals, finishing assemblies.

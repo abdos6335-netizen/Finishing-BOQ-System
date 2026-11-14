@@ -4,6 +4,7 @@ import type { CostAdjustment } from "./cost-engine";
 import type { VariationOrder } from "./variation-orders";
 import type { AssemblyDefinition } from "./finishing-assemblies";
 import type { MepTakeoffInput } from "./mep-takeoff";
+import type { ProjectSchedule } from "./project-schedule";
 
 export type BuildingCondition =
   | "red-brick"
@@ -31,6 +32,7 @@ export interface ProjectRecord {
   variations?: VariationOrder[];
   assemblies?: AssemblyDefinition[];
   mep?: MepTakeoffInput;
+  schedule?: ProjectSchedule;
 }
 
 const STORAGE_KEY = "finishing-boq.projects.v1";
@@ -104,6 +106,23 @@ function isMep(value: unknown): value is MepTakeoffInput {
       Array.isArray(r.allowances) && r.allowances.every(a => isRecord(a) && typeof a.description === "string" && typeof a.lengthM === "number" && typeof a.approvalRef === "string"));
 }
 
+function isSchedule(value: unknown): value is ProjectSchedule {
+  if (!isRecord(value)) return false;
+  const rel = ["FS", "SS", "FF"];
+  return (value.rounding === "none" || value.rounding === "ceil") &&
+    Array.isArray(value.rates) && value.rates.every(r => isRecord(r) && typeof r.id === "string" &&
+      ["m", "m2", "m3", "pcs"].includes(String(r.unit)) && (r.basis === "per-crew-day" || r.basis === "per-worker-day") &&
+      typeof r.value === "number" && typeof r.sourceRef === "string" && typeof r.sourceDate === "string" && typeof r.location === "string" &&
+      isOptionalNumber(r.confidence)) &&
+    Array.isArray(value.activities) && value.activities.every(a => isRecord(a) && typeof a.id === "string" && typeof a.name === "string" &&
+      typeof a.quantity === "number" && ["m", "m2", "m3", "pcs"].includes(String(a.unit)) && typeof a.quantitySourceRef === "string" &&
+      (a.rateId === undefined || typeof a.rateId === "string") && isOptionalNumber(a.crewSize) &&
+      Array.isArray(a.predecessors) && a.predecessors.every(p => isRecord(p) && typeof p.id === "string" && rel.includes(String(p.type)) && typeof p.lagDays === "number")) &&
+    (value.calendar === undefined || (isRecord(value.calendar) && typeof value.calendar.startDate === "string" &&
+      Array.isArray(value.calendar.workingWeekdays) && value.calendar.workingWeekdays.every(d => typeof d === "number") &&
+      Array.isArray(value.calendar.holidays) && value.calendar.holidays.every(h => typeof h === "string")));
+}
+
 function isRoom(value: unknown): value is RoomInput {
   if (!isRecord(value)) return false;
   return typeof value.id === "string" &&
@@ -137,7 +156,8 @@ export function loadProjects(): ProjectRecord[] {
           (item.adjustments !== undefined && (!Array.isArray(item.adjustments) || !item.adjustments.every(isAdjustment))) ||
           (item.variations !== undefined && (!Array.isArray(item.variations) || !item.variations.every(isVariation))) ||
           (item.assemblies !== undefined && (!Array.isArray(item.assemblies) || !item.assemblies.every(isAssembly))) ||
-          (item.mep !== undefined && !isMep(item.mep))) return [];
+          (item.mep !== undefined && !isMep(item.mep)) ||
+          (item.schedule !== undefined && !isSchedule(item.schedule))) return [];
 
       const projectType: ProjectType =
         item.projectType === "villa" ? "villa" : "apartment";
@@ -157,7 +177,8 @@ export function loadProjects(): ProjectRecord[] {
         ...(Array.isArray(item.adjustments) ? { adjustments: item.adjustments as CostAdjustment[] } : {}),
         ...(Array.isArray(item.variations) ? { variations: item.variations as VariationOrder[] } : {}),
         ...(Array.isArray(item.assemblies) ? { assemblies: item.assemblies as AssemblyDefinition[] } : {}),
-        ...(isMep(item.mep) ? { mep: item.mep } : {})
+        ...(isMep(item.mep) ? { mep: item.mep } : {}),
+        ...(isSchedule(item.schedule) ? { schedule: item.schedule } : {})
       }];
     });
   } catch {

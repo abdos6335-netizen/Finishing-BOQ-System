@@ -8,6 +8,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- Schedule screen: sourced productivity rates (no built-in table), activities whose quantity comes from a BOQ line, FS/SS/FF dependencies with lag, critical path, and calendar dates from an explicit start date, working weekdays and holidays. Rules live in `src/domain/project-schedule.ts`.
+- 4 tests for the schedule helpers and store round-trip (108 total).
 - UI screens for finishing assemblies (explicit ratio and rule reference per component, versioned, idempotent apply to all rooms) and MEP takeoff (points with drawing reference and review flag, circuit schedule, cable runs from documented segments and approved allowances, verified-only sync to the BOQ). Rules live in `src/domain/project-takeoff.ts`.
 - 6 tests for assemblies, MEP and store round-trip (104 total).
 - UI screens for project currency, cost adjustments (approval reference and explicit base required) and variation orders (draft/submitted/approved/rejected, approved is immutable, revised total); exports now use the project's currency, adjustments and variations. Rules live in `src/domain/project-costing.ts`.

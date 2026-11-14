@@ -19,3 +19,4 @@
 
 .point-choices{border:1px solid var(--line,#d8d8d8);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;grid-column:1/-1}
 #mep-panel h3{margin:18px 0 8px}
+.critical-row td{background:rgba(200,60,40,.08)}

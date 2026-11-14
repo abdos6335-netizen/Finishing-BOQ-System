@@ -7,6 +7,7 @@ import { buildReportModel, buildXlsx, renderReportHtml } from "./domain/report-e
 import { addVariationItem, adjustmentsOf, buildAdjustment, buildVariationItem, canDeleteVariation, createVariation, nextVariationNumber, projectFinancials, removeVariationItem, variationsOf } from "./domain/project-costing";
 import { calculateVariation, transitionVariation, type VariationOrder, type VariationStatus } from "./domain/variation-orders";
 import { addAssemblyComponent, addMepCableRun, addMepCircuit, addMepPoint, applyAssemblyToProject, assembliesOf, createAssembly, mepOf, mepSummary, removeAssemblyComponent, removeMepCableRun, removeMepCircuit, removeMepPoint, syncMepToBoq, toggleMepPointReviewed } from "./domain/project-takeoff";
+import { addActivity, addRate, removeActivity, removeRate, scheduleOf, scheduleView, setCalendar, setRounding } from "./domain/project-schedule";
 import "./style.css";
 
 let projects: ProjectRecord[] = [];
@@ -23,6 +24,7 @@ const copy = {
 variations:"الأعمال الإضافية (أوامر التغيير)",newVariation:"أمر تغيير جديد",voNumber:"الرقم",voTitle:"العنوان",voReason:"السبب",voBaseRevision:"إصدار المقايسة الأساسي",createVariation:"إنشاء الأمر",stDraft:"مسودة",stSubmitted:"مقدَّم",stApproved:"معتمد",stRejected:"مرفوض",voAddition:"إضافة",voOmission:"حذف من المقايسة",voDirection:"النوع",voSubmit:"تقديم",voApprove:"اعتماد",voReject:"رفض",voReopen:"إعادة لمسودة",voDelete:"حذف الأمر",voApprovalPrompt:"أدخل مرجع اعتماد الأمر:",voTotal:"صافي الأمر",voBaseTotal:"الإجمالي الأساسي",voApprovedTotal:"الأعمال المعتمدة",voRevisedTotal:"الإجمالي المعدّل",voPendingTotal:"قيد الاعتماد",voLocked:"لا يمكن تعديل البنود إلا في المسودة.",noVariations:"لا توجد أوامر تغيير.",voIncomplete:"أوامر بها بنود غير مسعّرة",voNoItems:"لا توجد بنود.",addVoItem:"إضافة بند",
 assemblies:"التجميعات (أنظمة التشطيب)",asmName:"اسم التجميع",asmCreate:"إنشاء تجميع",asmDelete:"حذف التجميع",asmApply:"تطبيق على كل الغرف",asmCode:"كود المكوّن",asmDescription:"الوصف",asmBasis:"أساس الحساب",bFloor:"مساحة الأرضية",bCeiling:"مساحة السقف",bWallNet:"صافي الحوائط",bWallGross:"إجمالي الحوائط",bPerimeter:"المحيط",asmRatio:"الكمية لكل وحدة أساس",asmRule:"مرجع القاعدة",asmAddComponent:"إضافة مكوّن",asmNone:"لا توجد تجميعات.",asmNoComponents:"لا توجد مكوّنات.",asmHint:"لا توجد نسب استهلاك افتراضية: كل مكوّن يحتاج نسبة ومرجع قاعدة. أي تعديل في التعريف يرفع رقم الإصدار.",asmApplied:"تمت الإضافة: {a} · تحديث: {u} · موجود: {p}",asmSkipped:"تم تخطي {n} (هندسة الحوائط ناقصة أو تحتاج مراجعة).",
 mep:"أعمال الـ MEP (من مخططات معتمدة فقط)",mepHint:"لا تُحسب نقاط ولا دوائر من مساحة الغرفة. النقاط تحتاج مرجع مخطط، والدوائر تأتي من جدول دوائر، والكابلات من أطوال مسارات موثقة.",mepDiscipline:"التخصص",dElectrical:"كهرباء",dLowCurrent:"تيار خفيف",dPlumbing:"سباكة",dHvac:"تكييف",mepDevice:"نوع الجهاز",mepCount:"العدد",mepRoom:"الغرفة",mepNoRoom:"بدون",mepDrawing:"مرجع المخطط",mepSheet:"اللوحة",mepRevision:"الإصدار",mepReviewed:"تمت المراجعة",mepAddPoint:"إضافة نقطة",mepPoints:"النقاط",mepCircuits:"جدول الدوائر",mepPanel:"اللوحة الكهربائية",mepCircuit:"رقم الدائرة",mepSchedule:"مرجع الجدول",mepCircuitPoints:"النقاط على الدائرة",mepAddCircuit:"إضافة دائرة",mepCables:"الكابلات",mepSpec:"مواصفة الكابل",mepCores:"عدد الأسلاك",mepParallel:"مسارات متوازية",mepRoute:"مرجع المسار",mepSegments:"أطوال المقاطع (م) مفصولة بفواصل",mepAllowance:"سماحية (م)",mepAllowanceDesc:"وصف السماحية",mepAllowanceRef:"مرجع اعتماد السماحية",mepAddCable:"إضافة كابل",mepSync:"إرسال المعتمد إلى المقايسة",mepSynced:"أضيف {a} · تحدّث {u}",mepStale:"{n} بند MEP لم يعد معتمدًا ومازال في المقايسة: راجعه.",mepCircuitCount:"عدد الدوائر",mepFromSchedule:"من الجدول",mepNeedsReview:"يحتاج مراجعة",mepConductor:"طول الموصلات (م)",mepStatusOk:"مؤكد",mepNoPoints:"لا توجد نقاط.",mepNoCircuits:"لا توجد دوائر.",mepNoCables:"لا توجد كابلات.",mepUnscheduled:"نقاط كهرباء بدون دائرة",
+schedule:"الجدول الزمني (المسار الحرج)",schHint:"لا توجد معدلات إنتاج مدمجة: كل معدل يحتاج مصدرًا وتاريخًا وموقعًا. كمية النشاط تُؤخذ من بند مقايسة. بدون معدل تبقى المدة غير مقدّرة ولا يُحسب المسار.",schRates:"معدلات الإنتاج",rateUnit:"الوحدة",rateBasis:"أساس المعدل",rbCrew:"لكل طاقم/يوم",rbWorker:"لكل عامل/يوم",rateValue:"الكمية في اليوم",prodSource:"مصدر المعدل",rateDate:"تاريخ المصدر",rateLocation:"الموقع",rateConfidence:"الثقة (0-1)",addRate:"إضافة معدل",noRates:"لا توجد معدلات.",schActivities:"الأنشطة",actName:"اسم النشاط",actItem:"بند المقايسة (الكمية)",actRate:"المعدل",actNoRate:"بدون معدل",actCrew:"حجم الطاقم (لكل عامل/يوم)",actPreds:"الأنشطة السابقة",actRel:"نوع العلاقة",actLag:"التأخير (أيام)",addActivity:"إضافة نشاط",noActivities:"لا توجد أنشطة.",schCalendar:"التقويم",calStart:"تاريخ البدء",calHolidays:"إجازات (yyyy-mm-dd مفصولة بفواصل)",calDays:"أيام العمل",saveCalendar:"حفظ التقويم",schRounding:"تقريب المدة",rndCeil:"لأعلى يوم كامل",rndNone:"بدون تقريب",schResult:"النتيجة",schDuration:"المدة",schStart:"بدء مبكر",schFinish:"انتهاء مبكر",schFloat:"الفائض",schCritical:"حرج",schProjectDuration:"مدة المشروع (أيام عمل)",schProjectFinish:"تاريخ الانتهاء",schIncomplete:"الجدول غير مكتمل: أنشطة بلا مدة مقدّرة.",schLogicOnly:"الفائض والحرج يصفان منطق الاعتماديات فقط (بدون موازنة موارد).",schNoCalendar:"أدخل التقويم لعرض التواريخ.",dow0:"أحد",dow1:"اثنين",dow2:"ثلاثاء",dow3:"أربعاء",dow4:"خميس",dow5:"جمعة",dow6:"سبت",
 language:"English",
     disclaimer:"نسخة تأسيسية: لا تعتمد النتائج كمقايسة تنفيذية قبل مراجعة الأبعاد وقواعد الخصم ومصدر الرسومات.",
     wallFace:"وجه حائط",addWallFace:"إضافة وجه حائط",faceLength:"طول الوجه (م)",faceHeight:"ارتفاع الوجه (م)",opening:"فتحة",addOpening:"إضافة فتحة",
@@ -37,6 +39,7 @@ language:"English",
 variations:"Variation orders",newVariation:"New variation order",voNumber:"Number",voTitle:"Title",voReason:"Reason",voBaseRevision:"Base BOQ revision",createVariation:"Create order",stDraft:"Draft",stSubmitted:"Submitted",stApproved:"Approved",stRejected:"Rejected",voAddition:"Addition",voOmission:"Omission from BOQ",voDirection:"Type",voSubmit:"Submit",voApprove:"Approve",voReject:"Reject",voReopen:"Back to draft",voDelete:"Delete order",voApprovalPrompt:"Enter the approval reference for this order:",voTotal:"Order net",voBaseTotal:"Base total",voApprovedTotal:"Approved variations",voRevisedTotal:"Revised total",voPendingTotal:"Pending approval",voLocked:"Items can only be edited while the order is a draft.",noVariations:"No variation orders yet.",voIncomplete:"Orders with unpriced items",voNoItems:"No items.",addVoItem:"Add item",
 assemblies:"Assemblies (finishing systems)",asmName:"Assembly name",asmCreate:"Create assembly",asmDelete:"Delete assembly",asmApply:"Apply to all rooms",asmCode:"Component code",asmDescription:"Description",asmBasis:"Quantity basis",bFloor:"Floor area",bCeiling:"Ceiling area",bWallNet:"Net wall area",bWallGross:"Gross wall area",bPerimeter:"Perimeter",asmRatio:"Quantity per basis unit",asmRule:"Rule reference",asmAddComponent:"Add component",asmNone:"No assemblies yet.",asmNoComponents:"No components.",asmHint:"There are no default consumption ratios: every component needs a ratio and a rule reference. Any change to the definition bumps its version.",asmApplied:"Added: {a} · updated: {u} · already present: {p}",asmSkipped:"{n} skipped (wall geometry missing or needs review).",
 mep:"MEP works (approved drawings only)",mepHint:"Points and circuits are never derived from room area. Points need a drawing reference, circuits come from a circuit schedule, and cables from documented route lengths.",mepDiscipline:"Discipline",dElectrical:"Electrical",dLowCurrent:"Low current",dPlumbing:"Plumbing",dHvac:"HVAC",mepDevice:"Device type",mepCount:"Count",mepRoom:"Room",mepNoRoom:"None",mepDrawing:"Drawing reference",mepSheet:"Sheet",mepRevision:"Revision",mepReviewed:"Reviewed",mepAddPoint:"Add point",mepPoints:"Points",mepCircuits:"Circuit schedule",mepPanel:"Panel",mepCircuit:"Circuit",mepSchedule:"Schedule reference",mepCircuitPoints:"Points on circuit",mepAddCircuit:"Add circuit",mepCables:"Cables",mepSpec:"Cable specification",mepCores:"Cores",mepParallel:"Parallel runs",mepRoute:"Route reference",mepSegments:"Segment lengths (m), comma separated",mepAllowance:"Allowance (m)",mepAllowanceDesc:"Allowance description",mepAllowanceRef:"Allowance approval reference",mepAddCable:"Add cable",mepSync:"Send verified items to BOQ",mepSynced:"Added {a} · updated {u}",mepStale:"{n} MEP BOQ line(s) are no longer verified but remain in the BOQ: review them.",mepCircuitCount:"Circuits",mepFromSchedule:"From schedule",mepNeedsReview:"Needs review",mepConductor:"Conductor length (m)",mepStatusOk:"Verified",mepNoPoints:"No points.",mepNoCircuits:"No circuits.",mepNoCables:"No cables.",mepUnscheduled:"Electrical points without a circuit",
+schedule:"Schedule (critical path)",schHint:"There are no built-in productivity rates: every rate needs a source, date and location. An activity's quantity comes from a BOQ line. Without a rate the duration stays unestimated and no path is computed.",schRates:"Productivity rates",rateUnit:"Unit",rateBasis:"Rate basis",rbCrew:"Per crew-day",rbWorker:"Per worker-day",rateValue:"Quantity per day",prodSource:"Rate source",rateDate:"Source date",rateLocation:"Location",rateConfidence:"Confidence (0-1)",addRate:"Add rate",noRates:"No rates.",schActivities:"Activities",actName:"Activity name",actItem:"BOQ item (quantity)",actRate:"Rate",actNoRate:"No rate",actCrew:"Crew size (per-worker-day)",actPreds:"Predecessors",actRel:"Relationship",actLag:"Lag (days)",addActivity:"Add activity",noActivities:"No activities.",schCalendar:"Calendar",calStart:"Start date",calHolidays:"Holidays (yyyy-mm-dd, comma separated)",calDays:"Working days",saveCalendar:"Save calendar",schRounding:"Duration rounding",rndCeil:"Up to whole days",rndNone:"No rounding",schResult:"Result",schDuration:"Duration",schStart:"Early start",schFinish:"Early finish",schFloat:"Float",schCritical:"Critical",schProjectDuration:"Project duration (working days)",schProjectFinish:"Finish date",schIncomplete:"The schedule is incomplete: some activities have no estimated duration.",schLogicOnly:"Float and criticality describe dependency logic only (no resource levelling).",schNoCalendar:"Enter the calendar to see dates.",dow0:"Sun",dow1:"Mon",dow2:"Tue",dow3:"Wed",dow4:"Thu",dow5:"Fri",dow6:"Sat",
 language:"العربية",
     disclaimer:"Foundation build: do not use as an execution BOQ until dimensions, deduction rules, and drawing sources are reviewed.",
     wallFace:"Wall face",addWallFace:"Add wall face",faceLength:"Face length (m)",faceHeight:"Face height (m)",opening:"Opening",addOpening:"Add opening",
@@ -107,6 +110,10 @@ function render():void{
   const mepPanel=document.querySelector<HTMLElement>("#mep-panel");
   mepPanel?.addEventListener("submit",mepSubmitHandler);
   mepPanel?.addEventListener("click",mepClickHandler);
+  const schPanel=document.querySelector<HTMLElement>("#schedule-panel");
+  schPanel?.addEventListener("submit",scheduleSubmitHandler);
+  schPanel?.addEventListener("click",scheduleClickHandler);
+  schPanel?.addEventListener("change",scheduleChangeHandler);
   const costPanel=document.querySelector<HTMLElement>("#cost-panel");
   costPanel?.addEventListener("submit",addAdjustmentHandler);
   costPanel?.addEventListener("click",removeAdjustmentHandler);
@@ -138,7 +145,7 @@ function renderProject(project:ProjectRecord):string{
     </section>
     <section class="panel room-editor-panel"><div class="panel-head"><div><span class="eyebrow">MEASURED GEOMETRY</span><h2>${t("measuredFaces")} &amp; ${t("openings")}</h2></div></div>
       <div id="room-editor-list">${project.rooms.map(renderRoomEditor).join("")||`<p class="muted">${t("noRooms")}</p>`}</div>
-    </section>${renderBoq(project)}${renderAssemblies(project)}${renderMep(project)}${renderCosting(project)}${renderVariations(project)}`;
+    </section>${renderBoq(project)}${renderAssemblies(project)}${renderMep(project)}${renderSchedule(project)}${renderCosting(project)}${renderVariations(project)}`;
 }
 function renderBoq(project:ProjectRecord):string{
   const summary=calculateBoq(project.boqItems);
@@ -387,6 +394,81 @@ function mepClickHandler(event:MouseEvent):void{
       window.alert(lines.join("\n"));
     }
   }catch(error){showError(error);}
+}
+
+function renderSchedule(project:ProjectRecord):string{
+  const sch=scheduleOf(project);
+  let view;try{view=scheduleView(project);}catch(error){return `<section class="panel boq-panel" id="schedule-panel"><p class="warn">${escapeHtml(error instanceof Error?error.message:t("createError"))}</p></section>`;}
+  const unitOpts=`<option value="m2">m²</option><option value="m">m</option><option value="m3">m³</option><option value="pcs">pcs</option>`;
+  const rateRows=sch.rates.map(r=>`<tr><td>${r.value} ${r.unit} · ${r.basis==="per-crew-day"?t("rbCrew"):t("rbWorker")}</td><td>${escapeHtml(r.sourceRef)}<small>${escapeHtml(r.sourceDate)} · ${escapeHtml(r.location)}</small></td><td><button class="text-button danger" data-sch-remove-rate="${escapeHtml(r.id)}">${t("remove")}</button></td></tr>`).join("");
+  const rateOpts=`<option value="">${t("actNoRate")}</option>`+sch.rates.map(r=>`<option value="${escapeHtml(r.id)}">${r.value} ${r.unit} · ${escapeHtml(r.sourceRef)}</option>`).join("");
+  const itemOpts=project.boqItems.map(i=>`<option value="${escapeHtml(i.id)}">${escapeHtml(i.code)} · ${escapeHtml(i.description)} (${i.netQuantity} ${i.unit})</option>`).join("");
+  const predChoices=sch.activities.map(a=>`<label class="check-label"><input type="checkbox" name="predecessorIds" value="${escapeHtml(a.id)}"/> ${escapeHtml(a.name)}</label>`).join("");
+  const cpmById=new Map((view.estimate.cpm?.rows??[]).map(row=>[row.id,row]));
+  const actRows=sch.activities.map(a=>{
+    const row=cpmById.get(a.id),range=view.dates.get(a.id);
+    return `<tr class="${row?.critical?"critical-row":""}"><td>${escapeHtml(a.name)}<small>${a.quantity} ${a.unit} · ${escapeHtml(a.quantitySourceRef)}</small></td><td>${row?row.durationDays:"—"}</td><td>${range?range.start:row?row.earlyStart:"—"}</td><td>${range?range.finish:row?row.earlyFinish:"—"}</td><td>${row?row.totalFloat:"—"}</td><td class="${row?.critical?"warn":""}">${row?.critical?t("schCritical"):""}</td><td><button class="text-button danger" data-sch-remove-activity="${escapeHtml(a.id)}">${t("remove")}</button></td></tr>`;
+  }).join("");
+  const days=[0,1,2,3,4,5,6].map(d=>`<label class="check-label"><input type="checkbox" name="weekdays" value="${d}" ${sch.calendar?.workingWeekdays.includes(d)?"checked":""}/> ${t(`dow${d}` as keyof typeof copy.ar)}</label>`).join("");
+  const cpm=view.estimate.cpm;
+  return `<section class="panel boq-panel" id="schedule-panel"><div class="panel-head"><div><span class="eyebrow">SCHEDULE</span><h2>${t("schedule")}</h2></div></div>
+    <p class="hint">${t("schHint")}</p>
+    <h3>${t("schRates")}</h3>
+    <form id="rate-form" class="boq-form">
+      <label>${t("rateUnit")}<select name="unit">${unitOpts}</select></label>
+      <label>${t("rateBasis")}<select name="basis"><option value="per-crew-day">${t("rbCrew")}</option><option value="per-worker-day">${t("rbWorker")}</option></select></label>
+      <label>${t("rateValue")}<input name="value" type="number" min="0" step="0.0001" required/></label>
+      <label>${t("prodSource")}<input name="sourceRef" required maxlength="160"/></label>
+      <label>${t("rateDate")}<input name="sourceDate" type="date" required/></label>
+      <label>${t("rateLocation")}<input name="location" required maxlength="80"/></label>
+      <label>${t("rateConfidence")}<input name="confidence" type="number" min="0" max="1" step="0.01"/></label>
+      <button class="primary" type="submit">${t("addRate")}</button></form>
+    <div class="boq-table-wrap"><table class="boq-table"><tbody>${rateRows||`<tr><td class="muted">${t("noRates")}</td></tr>`}</tbody></table></div>
+    <h3>${t("schCalendar")}</h3>
+    <form id="calendar-form" class="boq-form">
+      <label>${t("calStart")}<input name="startDate" type="date" required value="${escapeHtml(sch.calendar?.startDate??"")}"/></label>
+      <fieldset class="point-choices"><legend>${t("calDays")}</legend>${days}</fieldset>
+      <label>${t("calHolidays")}<input name="holidays" value="${escapeHtml((sch.calendar?.holidays??[]).join(", "))}"/></label>
+      <button class="primary" type="submit">${t("saveCalendar")}</button></form>
+    <label class="currency-label">${t("schRounding")}<select id="rounding-select"><option value="ceil" ${sch.rounding==="ceil"?"selected":""}>${t("rndCeil")}</option><option value="none" ${sch.rounding==="none"?"selected":""}>${t("rndNone")}</option></select></label>
+    <h3>${t("schActivities")}</h3>
+    <form id="activity-form" class="boq-form">
+      <label>${t("actName")}<input name="name" required maxlength="100"/></label>
+      <label>${t("actItem")}<select name="boqItemId" required>${itemOpts}</select></label>
+      <label>${t("actRate")}<select name="rateId">${rateOpts}</select></label>
+      <label>${t("actCrew")}<input name="crewSize" type="number" min="0" step="1"/></label>
+      <fieldset class="point-choices"><legend>${t("actPreds")}</legend>${predChoices||`<span class="muted">—</span>`}</fieldset>
+      <label>${t("actRel")}<select name="relationship"><option value="FS">FS</option><option value="SS">SS</option><option value="FF">FF</option></select></label>
+      <label>${t("actLag")}<input name="lagDays" type="number" step="0.5" value="0"/></label>
+      <button class="primary" type="submit">${t("addActivity")}</button></form>
+    ${cpm?`<div class="boq-summary"><div><span>${t("schProjectDuration")}</span><strong>${cpm.projectDurationDays}</strong></div>${view.projectFinish?`<div><span>${t("schProjectFinish")}</span><strong>${view.projectFinish}</strong></div>`:`<div><span>${t("schProjectFinish")}</span><strong>—</strong></div>`}</div>${view.projectFinish?"":`<p class="hint warn">${t("schNoCalendar")}</p>`}<p class="hint">${t("schLogicOnly")}</p>`:(sch.activities.length?`<p class="hint warn">${t("schIncomplete")}</p>`:"")}
+    <div class="boq-table-wrap"><table class="boq-table"><thead><tr><th>${t("schActivities")}</th><th>${t("schDuration")}</th><th>${t("schStart")}</th><th>${t("schFinish")}</th><th>${t("schFloat")}</th><th></th><th></th></tr></thead><tbody>${actRows||`<tr><td colspan="7" class="muted">${t("noActivities")}</td></tr>`}</tbody></table></div>
+    ${view.estimate.checks.length?`<ul class="validation-list">${view.estimate.checks.map(c=>`<li>${escapeHtml(c)}</li>`).join("")}</ul>`:""}
+  </section>`;
+}
+
+function scheduleSubmitHandler(event:SubmitEvent):void{
+  const form=event.target;if(!(form instanceof HTMLFormElement))return;
+  const project=activeProject();if(!project)return;const data=new FormData(form);
+  try{
+    if(form.id==="rate-form"){event.preventDefault();project.schedule=addRate(scheduleOf(project),{unit:field(data,"unit"),basis:field(data,"basis"),value:field(data,"value"),sourceRef:field(data,"sourceRef"),sourceDate:field(data,"sourceDate"),location:field(data,"location"),confidence:field(data,"confidence")},createId());persist();return;}
+    if(form.id==="calendar-form"){event.preventDefault();project.schedule=setCalendar(scheduleOf(project),{startDate:field(data,"startDate"),weekdays:data.getAll("weekdays").map(Number),holidays:field(data,"holidays")});persist();return;}
+    if(form.id==="activity-form"){event.preventDefault();project.schedule=addActivity(project,{name:field(data,"name"),boqItemId:field(data,"boqItemId"),rateId:field(data,"rateId"),crewSize:field(data,"crewSize"),predecessorIds:data.getAll("predecessorIds").map(String),relationship:field(data,"relationship"),lagDays:field(data,"lagDays")},createId());persist();}
+  }catch(error){showError(error);}
+}
+function scheduleClickHandler(event:MouseEvent):void{
+  const target=event.target;if(!(target instanceof HTMLElement))return;
+  const button=target.closest<HTMLButtonElement>("[data-sch-remove-rate],[data-sch-remove-activity]");if(!button)return;
+  const project=activeProject();if(!project)return;
+  try{
+    if(button.dataset.schRemoveRate){project.schedule=removeRate(scheduleOf(project),button.dataset.schRemoveRate);persist();return;}
+    if(button.dataset.schRemoveActivity){project.schedule=removeActivity(scheduleOf(project),button.dataset.schRemoveActivity);persist();}
+  }catch(error){showError(error);}
+}
+function scheduleChangeHandler(event:Event):void{
+  const target=event.target;if(!(target instanceof HTMLSelectElement)||target.id!=="rounding-select")return;
+  const project=activeProject();if(!project)return;
+  try{project.schedule=setRounding(scheduleOf(project),target.value);persist();}catch(error){showError(error);}
 }
 
 function renderCosting(project:ProjectRecord):string{

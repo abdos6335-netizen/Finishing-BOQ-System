@@ -19,7 +19,7 @@ Engines (`src/domain`, framework-free, deterministic, each result carries its so
 - Data: IndexedDB storage with one-time localStorage migration, offline queue with idempotent replay, three-way conflict resolution (protected fields are never auto-resolved).
 - Reports: bilingual (AR/EN) HTML report for print-to-PDF and a dependency-free `.xlsx` export (opened and checked with an independent reader).
 
-The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies and MEP takeoff have their own screens. The other engines are tested and available as a library but do not have their own screens yet.
+The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies, MEP takeoff and the schedule (productivity rates, activities, critical path, calendar dates) have their own screens. The other engines are tested and available as a library but do not have their own screens yet.
 
 ## Three delivery stages
 
@@ -31,7 +31,7 @@ The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Co
 
 - No drawing import, DXF/PDF/image reading, OCR, or scale calibration. Dimension observations must be entered or supplied by a future extraction component.
 - No server, user accounts, roles, or audit log. The sync queue and conflict resolution are implemented and tested against an in-memory reference server only; real cross-device sync needs a backend that implements the `SyncTransport` contract.
-- No screens yet for the schedule (critical path) or sync conflict review.
+- No screen yet for sync conflict review.
 - PDF output is produced by the browser's print dialog from the HTML report, not by a PDF library.
 - No Windows desktop packaging.
 - No productivity-rate or material-price library: rates and prices must always be entered with a source.

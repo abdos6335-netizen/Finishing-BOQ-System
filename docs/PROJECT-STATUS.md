@@ -32,7 +32,7 @@ The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Co
 - No drawing import, DXF/PDF/image reading, OCR, or scale calibration. Dimension observations must be entered or supplied by a future extraction component.
 - No server, user accounts, roles, or audit log. The sync queue and conflict resolution are implemented and tested against an in-memory reference server only; real cross-device sync needs a backend that implements the `SyncTransport` contract.
 - Sync conflict review is a manual snapshot tool until a real backend implements `SyncTransport`; no live cross-device conflict feed is connected.
-- A browser smoke test covers the main flow (`npm run e2e`) but is run manually, not in CI. Conflict-review and assembly/MEP screens are not yet covered by it.
+- A Playwright browser smoke test (`npm run e2e`, CI job `browser-e2e`) covers the main flow, assemblies, MEP, conflict review and a mobile layout check. It checks behaviour and overflow, not visual design; mobile screenshots are saved as CI artifacts for human review.
 - PDF output is produced by the browser's print dialog from the HTML report, not by a PDF library.
 - No Windows desktop packaging.
 - No productivity-rate or material-price library: rates and prices must always be entered with a source.

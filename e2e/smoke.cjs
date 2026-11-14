@@ -93,6 +93,63 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
     const sch = await text("#schedule-panel");
     check("schedule computes duration for sourced activity", /3/.test(sch) && !/incomplete|غير مكتمل/.test(sch.split("Prep")[1] ?? ""));
 
+    // assemblies
+    await page.fill("#assembly-form [name=name]", "Floor system"); await page.click("#assembly-form button[type=submit]");
+    await page.waitForSelector(".asm-component-form");
+    const af = page.locator(".asm-component-form");
+    await af.locator("[name=code]").fill("ASM-TILE"); await af.locator("[name=description]").fill("Tile layer");
+    await af.locator("[name=quantityPerBasisUnit]").fill("1"); await af.locator("[name=ruleRef]").fill("Spec 09-30");
+    await af.locator("button[type=submit]").click();
+    await page.waitForSelector("[data-asm-apply]:not([disabled])");
+    const beforeAlerts = alerts.length;
+    await page.click("[data-asm-apply]"); await page.waitForTimeout(300);
+    check("assembly applied to rooms (1 line added)", alerts.length === beforeAlerts + 1 && /1/.test(alerts[alerts.length - 1]), alerts[alerts.length - 1]);
+    check("assembly line is in the BOQ", (await text("#boq-items")).includes("ASM-TILE"));
+    await page.click("[data-asm-apply]"); await page.waitForTimeout(300);
+    check("re-applying adds nothing (no duplicates)", (await page.locator("#boq-items tbody tr", { hasText: "ASM-TILE" }).count()) === 1, alerts[alerts.length - 1]);
+    const noRule = page.locator(".asm-component-form");
+    await noRule.locator("[name=code]").fill("X2"); await noRule.locator("[name=description]").fill("No rule");
+    await noRule.locator("[name=quantityPerBasisUnit]").fill("1"); await noRule.locator("[name=ruleRef]").fill(" ");
+    const n1 = alerts.length; await noRule.locator("button[type=submit]").click(); await page.waitForTimeout(200);
+    check("assembly component without a rule reference is rejected", alerts.length === n1 + 1 || (await page.locator("[data-asm-remove-component]").count()) === 1);
+
+    // MEP
+    await page.selectOption("#mep-point-form [name=discipline]", "electrical");
+    await page.fill("#mep-point-form [name=deviceType]", "Socket"); await page.fill("#mep-point-form [name=count]", "4");
+    await page.fill("#mep-point-form [name=drawingRef]", "E-01"); await page.check("#mep-point-form [name=reviewed]");
+    await page.click("#mep-point-form button[type=submit]");
+    await page.waitForFunction(() => document.querySelector("#mep-panel")?.textContent?.includes("Socket"));
+    await page.check("#mep-circuit-form [name=pointIds]");
+    await page.fill("#mep-circuit-form [name=panelRef]", "DB1"); await page.fill("#mep-circuit-form [name=circuitRef]", "C1");
+    await page.fill("#mep-circuit-form [name=scheduleRef]", "Schedule 1"); await page.click("#mep-circuit-form button[type=submit]");
+    await page.waitForFunction(() => document.querySelector("#mep-panel")?.textContent?.includes("Schedule 1"));
+    await page.fill("#mep-cable-form [name=spec]", "3x2.5"); await page.fill("#mep-cable-form [name=cores]", "3");
+    await page.fill("#mep-cable-form [name=routeRef]", "R-1"); await page.fill("#mep-cable-form [name=segments]", "10, 5");
+    await page.click("#mep-cable-form button[type=submit]");
+    await page.waitForFunction(() => document.querySelector("#mep-panel")?.textContent?.includes("R-1"));
+    const mepText = await text("#mep-panel");
+    check("MEP circuit count comes from the schedule (1)", /1 \(/.test(mepText) || /\b1\b/.test(mepText.split("عدد الدوائر")[1] ?? ""), mepText.slice(0, 200));
+    check("cable conductor length 45 = 15 m x 3 cores", /\b45\b/.test(mepText));
+    await page.click("[data-mep-sync]"); await page.waitForTimeout(300);
+    check("verified MEP point reaches the BOQ", /mep:/.test(await text("#boq-items")));
+    await page.uncheck("[data-mep-review]"); await page.waitForTimeout(200);
+    const n2 = alerts.length; await page.click("[data-mep-sync]"); await page.waitForTimeout(300);
+    check("un-verified point warns that its BOQ line is stale", alerts.length === n2 + 1 && alerts[alerts.length - 1].split("\n").length >= 2, alerts[alerts.length - 1]);
+
+    // sync conflict review
+    await page.fill("#conflict-form [name=base]", '{"quantity":10,"note":"a"}');
+    await page.fill("#conflict-form [name=local]", '{"quantity":12,"note":"a"}');
+    await page.fill("#conflict-form [name=remote]", '{"quantity":15,"note":"b"}');
+    await page.click("#conflict-form button[type=submit]");
+    await page.waitForSelector("#conflict-choices-form");
+    check("protected field conflict is surfaced, not auto-resolved", /Conflicts: 1/.test(await text("#conflict-review-panel")));
+    const n3 = alerts.length; await page.click("[data-conflict-resolve]"); await page.waitForTimeout(200);
+    check("resolving without an explicit choice is refused", alerts.length === n3 + 1 && /quantity/.test(alerts[alerts.length - 1]), alerts[alerts.length - 1]);
+    await page.selectOption("[name='choice:quantity']", "remote"); await page.click("[data-conflict-resolve]");
+    await page.waitForSelector(".conflict-output");
+    const merged = await text(".conflict-output");
+    check("merged record takes the chosen quantity and the non-conflicting remote note", /"quantity": 15/.test(merged) && /"note": "b"/.test(merged), merged);
+
     // persistence across reload
     await page.waitForTimeout(500); await page.reload(); await page.waitForSelector("#room-form");
     check("project survives reload", (await text("h1")).includes("E2E Apartment") && (await text("#cost-panel")).includes("Mgr OK"));
@@ -103,6 +160,26 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
     await page.click("#language-toggle"); await page.waitForTimeout(200);
     check("English UI after toggle", /Grand total/.test(await text("#cost-panel")));
     await page.click("#language-toggle");
+
+    // mobile layout (390x844)
+    const shotDir = process.env.SHOT_DIR ?? "e2e-artifacts"; require("node:fs").mkdirSync(shotDir, { recursive: true });
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
+    const overflow = await page.evaluate(() => {
+      const w = window.innerWidth, bad = [];
+      for (const el of document.querySelectorAll("main *, .shell *")) {
+        if (el.closest(".boq-table-wrap")) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && (r.right > w + 1 || r.left < -1)) bad.push(`${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${String(el.className).split(" ")[0]}`);
+      }
+      return { page: document.documentElement.scrollWidth - w, bad: [...new Set(bad)].slice(0, 8) };
+    });
+    check("mobile: no horizontal page overflow", overflow.page <= 1, JSON.stringify(overflow));
+    check("mobile: no element sticks out of the screen", overflow.bad.length === 0, JSON.stringify(overflow));
+    for (const id of ["#room-form", "#boq-form", "#assembly-panel", "#mep-panel", "#schedule-panel", "#cost-panel", "#variation-panel", "#conflict-review-panel"]) {
+      await page.locator(id).first().scrollIntoViewIfNeeded(); await page.waitForTimeout(80);
+      await page.screenshot({ path: `${shotDir}/mobile-${id.replace("#", "")}.png` });
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     // exports
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#export-xlsx")]);

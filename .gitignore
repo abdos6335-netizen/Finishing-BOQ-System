@@ -123,3 +123,4 @@ Thumbs.db
 .marimo/
 
 e2e-*.png
+e2e-artifacts/

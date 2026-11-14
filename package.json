@@ -1,0 +1,20 @@
+{
+  "name": "finishing-boq-system",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "npm run build && node e2e/smoke.cjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.8",
+    "playwright": "1.63.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}

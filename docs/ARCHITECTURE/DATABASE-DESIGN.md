@@ -172,14 +172,18 @@ Cross-reference catalog for common drawing type codes.
 
 ## 6. Synchronization & Conflict Resolution
 
-This is an **offline-first** system. On reconnect:
-1. Local edits are the latest work.
-2. Cloud changes are applied; a **conflict record** is created when timestamps overlap.
-3. Resolution is a combination of:
-   - *Last-write with decision log* (most common for audit fields), or
-   - *User-driven merge* (for meaningful differences).
+This is an offline-capable system, but the synchronization protocol is not yet approved. The following are required design constraints, not an implemented protocol:
 
-The `audit` table records every decision with the user, timestamp, and reason. Restore or deletion is never automatic.
+1. Persist local writes and a durable outbound change record atomically.
+2. Use stable operation IDs and idempotent server handling so retries cannot duplicate work.
+3. Track server revisions/ETags or equivalent expected versions; detect stale updates rather than blindly overwriting them.
+4. Pull changes using a durable cursor/checkpoint and apply them transactionally.
+5. Retain conflict records with both versions, actor/device metadata, timestamps, and resolution history.
+6. Define conflict policy per entity. Engineering dimensions, quantity results, BOQ revisions, approvals, and financial records must not use generic last-write-wins as a silent resolution.
+7. Expose pending, synced, failed, and conflict states to the user.
+8. Never delete unsynchronized local changes after a network or validation failure.
+
+The audit log records who made or resolved a change, when, why, and which source versions were involved. Restore and destructive actions require an explicit, auditable operation.
 
 ---
 

@@ -59,15 +59,19 @@ The system is separated into layers mounted on Desktop (Tauri) + Web.
 └───────────────────────────────┘  └───────────────────────────────┘
 ```
 
-### Key design decisions
+### Architecture constraints and pending decisions
 
-| Decision | Choice | Rationale | Alternatives (Rejected) |
-|----------|--------|-----------|--------------------------|
-| Desktop framework | Tauri 2 + React + TS | Lightweight, uses web UI, cross-platform | Electron (heavy) |
-| Backend | Python + FastAPI | Engine and services in one language | Node.js backend (duplication risk) |
-| Sync | SQLite (local) + PostgreSQL (cloud) | Reliable offline-first | MongoDB sync (extra latency) |
-| Drawing | ezdxf (DXF), PyMuPDF/PDF, images | DXF is the priority; PDF/PNG second | First-party DWG SDK (cost, license) |
-| Verification | Separate engine path | Independent recalculation | Using same path + assertion |
+The logical separation and engineering principles are requirements. Concrete technology selections are tracked in [the Architecture Decision Register](../ARCHITECTURE/ARCHITECTURE-DECISION-REGISTER.md) and are not frozen in this draft.
+
+Confirmed constraints:
+- A deterministic engineering core must be independent from AI and UI.
+- Primary calculation and independent verification must be separately designed.
+- Desktop and web clients must use the same versioned calculation contract.
+- Critical workflows must be offline-capable; local and remote persistence must reconcile safely.
+- DXF/PDF/image support and any DWG support must be validated against representative files and licensing.
+- Synchronization must detect conflicts and preserve both versions; silent last-write-wins is not acceptable for engineering or financial records.
+
+Desktop shell, web framework, API framework, local/browser/cloud database, sync technology, OCR/AI providers, and deployment topology remain subject to architecture evaluation.
 
 ---
 
@@ -219,7 +223,7 @@ The system is separated into layers mounted on Desktop (Tauri) + Web.
 
 **TC-GE-01** | Rectangle 5.0 × 4.0 m → area = 20.0 m² (tolerance ±0.01)
 **TC-GE-02** | Rectangle 5.0 × 4.0 m → perimeter = 18.0 m (tolerance ±0.01)
-**TC-GE-03** | Wall 10.0 × 3.0 m with an opening 2.0 × 0.9 m → net area = 27.3 m²
+**TC-GE-03** | One wall face 10.0 × 3.0 m with one applicable opening 2.0 × 0.9 m → gross = 30.0 m²; deduction = 1.8 m²; net = 28.2 m²
 **TC-GE-04** | Floor area with a 2.0 m² variation zone → net = total − variation
 
 ### 5.2 Openings & Deductions

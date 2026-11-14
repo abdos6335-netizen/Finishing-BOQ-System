@@ -1,55 +1,54 @@
-# Finishing BOQ & Cost Estimation System
+# Finishing BOQ & Cost Estimation System — Project Status
 
-## Project Status
+**Delivery stage:** 1 of 3 — Build the usable application  
+**Current version:** 0.1.0-foundation  
+**Default branch:** main  
+**Active implementation branch:** implementation/four-phase-roadmap
 
-**Current Status:** Requirements and Architecture Preparation
-**Current Version:** 0.1.0-preparation
-**Default Branch:** main
+## Verified implementation state (2026-11-13)
 
-## Project Objective
+Latest code adds the schedule and conflict-review screens plus 6 tests. GitHub Actions run #54 passed: **110 tests in 12 files pass and `npm run build` succeeds**. This verifies unit/integration rules and compilation, not browser end-to-end behavior.
 
-Build a professional finishing quantity surveying and cost estimation application for residential projects, including apartments and villas.
+Engines (`src/domain`, framework-free, deterministic, each result carries its source/approval reference):
+- Quantities and BOQ: room quantities, BOQ lines, room-to-BOQ synchronization that preserves commercial approvals, finishing assemblies.
+- Verification: written-vs-extracted dimension comparison and batch dimension audit (blocks dependent quantities).
+- Costing: project cost roll-up with approved adjustments, client view that keeps hidden adjustments inside the total, variation orders with an approval workflow.
+- Time: productivity engine (no built-in rates), CPM with FS/SS/FF and lags, working-day calendar mapping.
+- MEP: takeoff from approved points, circuit schedules and documented cable routes only.
+- Structure: project hierarchy with quantity roll-up.
+- Data: IndexedDB storage with one-time localStorage migration, offline queue with idempotent replay, three-way conflict resolution (protected fields are never auto-resolved).
+- Reports: bilingual (AR/EN) HTML report for print-to-PDF and a dependency-free `.xlsx` export (opened and checked with an independent reader).
 
-## Core Principles
+The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies, MEP takeoff, the schedule (sourced durations or productivity rates, critical path, calendar dates) and manual sync-conflict review have screens. Conflict review accepts explicitly entered snapshots only; it is not connected to a live sync backend.
 
-- Deterministic engineering calculation engine independent from AI.
-- Independent quantity verification.
-- Full traceability of dimensions, formulas, assumptions, and approvals.
-- Revision-controlled BOQs and audit history.
-- Offline-first operation with secure synchronization.
-- Arabic and English interface.
-- No automatic approval of uncertain engineering or financial data.
+## Three delivery stages
 
-## Project Roadmap
+1. **Build:** complete drawing intake and review, calculation engine, independent verification, BOQ, costing, productivity, reports, durable data, offline sync, security, and Windows/Web delivery.
+2. **Review:** audit code against every approved requirement, validate engineering rules, run automated/integration/security/recovery tests, and resolve defects.
+3. **Trial release:** publish a controlled web preview and Windows trial package only after review gates pass.
 
-1. Requirements gathering and scope definition.
-2. Software Requirements Specification.
-3. System architecture and database design.
-4. Development environment and project foundation.
-5. Project and drawing management.
-6. Drawing intelligence and data extraction.
-7. Engineering quantity calculation engine.
-8. Independent verification engine.
-9. BOQ and cost estimation.
-10. Scheduling and productivity.
-11. Reports and exports.
-12. AI assistance, synchronization, and backups.
-13. Internal testing and first release.
-14. User acceptance testing and improvements.
+## Current limitations
 
-## Current Work
+- No drawing import, DXF/PDF/image reading, OCR, or scale calibration. Dimension observations must be entered or supplied by a future extraction component.
+- No server, user accounts, roles, or audit log. The sync queue and conflict resolution are implemented and tested against an in-memory reference server only; real cross-device sync needs a backend that implements the `SyncTransport` contract.
+- Sync conflict review is a manual snapshot tool until a real backend implements `SyncTransport`; no live cross-device conflict feed is connected.
+- A Playwright browser smoke test (`npm run e2e`, CI job `browser-e2e`) covers the main flow, assemblies, MEP, conflict review and a mobile layout check. It checks behaviour and overflow, not visual design; mobile screenshots are saved as CI artifacts for human review.
+- PDF output is produced by the browser's print dialog from the HTML report, not by a PDF library.
+- No Windows desktop packaging.
+- No productivity-rate or material-price library: rates and prices must always be entered with a source.
 
-Detailed database schema and system architecture preparation.
+## Engineering guardrails
 
-## Important Rules
+- Deterministic calculations remain independent from AI.
+- Inputs must be explicit; no guessed dimensions or unapproved waste factors.
+- Every result must eventually link to drawing evidence, dimensions, formula/rule version, assumptions, and verification status.
+- Independent verification must use a separately designed calculation path.
+- User acceptance testing starts only after a usable release candidate exists.
 
-- Planning is not implementation.
-- A phase is complete only after implementation and verification.
-- No client drawings, private project information, credentials, or API keys may be committed to this public repository.
-- Internal tests must be completed before user acceptance testing.
+## Next implementation work
 
-## Reference Test Project
-
-Kitchen + Laundry.
-
-The user acceptance test will take place after a usable first release is available.
+1. Browser end-to-end and visual checks for the schedule and conflict-review screens; validate bilingual labels and project persistence.
+2. Backend implementing `SyncTransport`, with authentication and roles.
+3. Drawing upload with revision metadata, then DXF/PDF extraction feeding the dimension audit.
+4. Windows packaging (e.g. Tauri) once the web application is stable.
+5. Independent engineering review of the quantity rules against the reference project.

@@ -8,6 +8,19 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- Browser smoke test (`npm run e2e`, Playwright, 30 checks; also covers assemblies, MEP, sync-conflict review and a 390 px mobile layout check with screenshots; runs in CI as the separate `browser-e2e` job, CI now installs with `npm ci`): project → room/faces/opening → takeoff (20.00 / 20.00 / 52.20) → priced line → adjustment (1000 → 1100) → rejected invalid adjustment → variation approval (revised 1200) → rate/sourced schedule → reload persistence → AR/EN → xlsx download. Playwright is a pinned devDependency (1.63.0).
+- Schedule screen (one unified critical-path calculation): activities can take their duration from a sourced productivity rate applied to a BOQ quantity (no built-in rates; source, date and location required) or from an explicit duration source reference. FS/SS/FF with lag, total float, critical activities, and calendar dates from an explicit start date, working weekdays and holidays; unestimated activities block the path instead of being guessed. Activities persist with project data.
+- Manual three-snapshot sync conflict review UI (base/local/remote JSON), explicit per-field choices and protected engineering/financial fields; it previews the merged record but does not sync to another device.
+- Tests for the sourced schedule, the rate-based schedule and conflict review.
+- UI screens for finishing assemblies (explicit ratio and rule reference per component, versioned, idempotent apply to all rooms) and MEP takeoff (points with drawing reference and review flag, circuit schedule, cable runs from documented segments and approved allowances, verified-only sync to the BOQ). Rules live in `src/domain/project-takeoff.ts`.
+- 6 tests for assemblies, MEP and store round-trip (104 total).
+- UI screens for project currency, cost adjustments (approval reference and explicit base required) and variation orders (draft/submitted/approved/rejected, approved is immutable, revised total); exports now use the project's currency, adjustments and variations. Rules live in `src/domain/project-costing.ts`.
+- 7 tests for project costing and store round-trip (98 total).
+- Domain engines: dimension audit, finishing assemblies, productivity, cost roll-up, variation orders, MEP takeoff, critical path, project hierarchy.
+- IndexedDB project storage with one-time migration from localStorage.
+- Offline sync queue (idempotent replay), in-memory reference server, and three-way conflict resolution.
+- Bilingual HTML report and dependency-free Excel (.xlsx) export; Excel and print/PDF buttons in the UI.
+- 57 new unit and integration tests (91 total), including the 7 workflow scenarios in docs/QUALITY/INTEGRATION-TEST-MATRIX.md.
 - Initial project foundation: README, technical documentation, architecture, and project roadmaps.
 - Core data models: Project, Building, Room, Drawing, BOQ, Item, Cost, Schedule, Audit.
 - Deterministic quantity calculation engine specification.

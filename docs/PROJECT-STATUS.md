@@ -19,7 +19,7 @@ Engines (`src/domain`, framework-free, deterministic, each result carries its so
 - Data: IndexedDB storage with one-time localStorage migration, offline queue with idempotent replay, three-way conflict resolution (protected fields are never auto-resolved).
 - Reports: bilingual (AR/EN) HTML report for print-to-PDF and a dependency-free `.xlsx` export (opened and checked with an independent reader).
 
-The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies, MEP takeoff, sourced CPM schedule and manual sync-conflict review have screens. Conflict review currently accepts explicit base/local/remote JSON snapshots; it is not connected to a real cross-device sync backend.
+The web UI uses IndexedDB storage and offers CSV, Excel and print/PDF export. Cost adjustments, variation orders, finishing assemblies, MEP takeoff, the schedule (sourced durations or productivity rates, critical path, calendar dates) and manual sync-conflict review have screens. Conflict review accepts explicitly entered snapshots only; it is not connected to a live sync backend.
 
 ## Three delivery stages
 

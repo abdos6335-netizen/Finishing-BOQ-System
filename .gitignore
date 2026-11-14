@@ -121,3 +121,5 @@ Thumbs.db
 .pixi/*
 !.pixi/config.toml
 .marimo/
+
+e2e-*.png
